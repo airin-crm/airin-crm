@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIRIN CRM v1.0</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;font-size:13px;color:#1a1a1a;background:#f5f5f3;padding:16px}
+input,select,textarea{font-family:inherit;font-size:11px;color:#1a1a1a;background:#fff;border:0.5px solid #ccc;border-radius:5px;padding:4px 5px;width:100%;-webkit-appearance:none;appearance:none}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23888'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 5px center;padding-right:16px}
+input[type=number]{-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#555}
+textarea{resize:vertical;line-height:1.5}
+button{font-family:inherit;cursor:pointer}
+.wrap{padding:0.5rem 0}
+.top-bar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.app-badge{font-size:10px;font-weight:600;letter-spacing:.08em;color:#fff;background:#1a1a1a;padding:3px 8px;border-radius:4px;flex-shrink:0}
+.board-title-el{font-size:16px;font-weight:600;cursor:pointer;border-bottom:1px dashed #bbb;padding-bottom:1px}
+.title-input{font-size:16px;font-weight:600;border:none;border-bottom:1.5px solid #555;border-radius:0;padding:0 2px;background:transparent;width:260px}
+.search-wrap{display:flex;align-items:center;gap:6px;margin-left:auto}
+.search-input{width:220px;font-size:11px;padding:5px 10px;border-radius:20px}
+.search-clear{font-size:11px;color:#888;background:none;border:none;cursor:pointer;padding:0 4px}
+.search-badge{font-size:10px;background:#E6F1FB;color:#185FA5;padding:2px 8px;border-radius:999px}
+.board{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;align-items:flex-start;min-height:380px}
+.column{background:#ebebeb;border-radius:12px;border:0.5px solid #ddd;min-width:200px;width:200px;flex-shrink:0;transition:opacity .15s}
+.column.col-dragging{opacity:0.35}
+.column.col-drag-over{border:1.5px dashed #555}
+.col-header{padding:10px 12px 6px;display:flex;align-items:center;justify-content:space-between;gap:4px}
+.col-drag-handle{cursor:grab;color:#888;opacity:.5;font-size:13px;padding:0 2px;flex-shrink:0;user-select:none}
+.col-drag-handle:hover{opacity:.9}
+.col-title-wrap{display:flex;align-items:center;gap:5px;flex:1;min-width:0}
+.col-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.col-name{font-size:11px;font-weight:600;color:#555;cursor:pointer;border-bottom:1px dashed transparent;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:108px}
+.col-name:hover{border-color:#bbb}
+.col-name-input{font-size:11px;font-weight:600;border:none;border-bottom:1px solid #555;border-radius:0;padding:0 2px;background:transparent;width:100px;color:#555}
+.col-count{background:#fff;border:0.5px solid #ddd;border-radius:999px;padding:1px 7px;font-size:10px;flex-shrink:0}
+.cards{padding:3px 8px 8px;min-height:60px;display:flex;flex-direction:column;gap:6px}
+.card{background:#fff;border:0.5px solid #e0e0e0;border-radius:10px;padding:10px 11px;cursor:pointer;transition:border-color .15s}
+.card:hover{border-color:#bbb}
+.card.dragging{opacity:0.35}
+.card.hidden{display:none}
+.card.highlight{border-color:#185FA5;border-width:1.5px}
+.card-name{font-size:13px;font-weight:600;margin-bottom:6px}
+.card-row{display:flex;align-items:center;gap:5px;font-size:10px;color:#777;margin-bottom:3px;line-height:1.4}
+.card-icon{width:11px;height:11px;flex-shrink:0;opacity:.55}
+.card-status{display:flex;flex-wrap:wrap;gap:3px;margin:5px 0}
+.stag{font-size:9px;padding:2px 6px;border-radius:999px;font-weight:500;background:#FCEBEB;color:#A32D2D}
+.card-amount{margin-top:6px;padding-top:6px;border-top:0.5px solid #eee;display:flex;align-items:baseline;justify-content:flex-end;gap:4px}
+.amount-label{font-size:9px;color:#999}
+.amount-val{font-size:13px;font-weight:600}
+.add-btn{width:100%;text-align:left;padding:5px 10px;font-size:10px;color:#888;background:transparent;border:none;border-radius:8px}
+.add-btn:hover{background:#fff}
+.drop-zone{border:1.5px dashed #ccc;border-radius:7px;min-height:36px;display:none;align-items:center;justify-content:center;font-size:10px;color:#aaa;margin-bottom:3px}
+.drop-zone.active{display:flex}
+.modal-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.42);align-items:flex-start;justify-content:center;padding:20px 8px;z-index:1000;overflow-y:auto}
+.modal-wrap.open{display:flex}
+.modal{background:#fff;border-radius:12px;border:0.5px solid #ddd;padding:20px 24px;width:100%;max-width:1100px;margin:auto}
+.modal-title{font-size:14px;font-weight:600;margin-bottom:12px;padding-bottom:10px;border-bottom:0.5px solid #eee}
+.sl{font-size:10px;font-weight:600;color:#888;margin:12px 0 5px;padding-bottom:3px;border-bottom:0.5px solid #eee;letter-spacing:.04em}
+.fi label{font-size:10px;color:#888;display:block;margin-bottom:2px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.chk-group{display:flex;gap:20px;flex-wrap:wrap;padding:6px 0}
+.chk-item{display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer}
+.chk-item input[type=checkbox]{width:14px;height:14px;accent-color:#185FA5;-webkit-appearance:auto;appearance:auto;flex-shrink:0}
+.ptable{width:100%;border-collapse:collapse;font-size:10px}
+.ptable th{font-size:9px;font-weight:600;color:#888;padding:3px;border-bottom:0.5px solid #eee;text-align:left;white-space:nowrap}
+.ptable td{padding:2px;vertical-align:middle}
+.ptable td select{font-size:10px;padding:3px 4px;padding-right:14px}
+.ptable td input{font-size:10px;padding:3px 4px}
+.sub-cell{font-size:10px;text-align:right;white-space:nowrap;color:#888}
+.tire-chk{display:flex;align-items:center;gap:5px;font-size:11px}
+.tire-chk input[type=checkbox]{width:14px;height:14px;flex-shrink:0;accent-color:#185FA5;-webkit-appearance:auto;appearance:auto}
+.btn{padding:6px 14px;font-size:11px;border-radius:7px;border:0.5px solid #ccc;background:transparent;color:#1a1a1a}
+.btn:hover{background:#f0f0f0}
+.btn-primary{background:#185FA5;color:#E6F1FB;border-color:transparent}.btn-primary:hover{opacity:.88}
+.btn-reserve{background:#3B6D11;color:#EAF3DE;border-color:transparent}.btn-reserve:hover{opacity:.88}
+.btn-sales{background:#854F0B;color:#FAEEDA;border-color:transparent}.btn-sales:hover{opacity:.88}
+.btn-danger{color:#A32D2D;border-color:#F09595}
+.modal-actions{display:flex;align-items:center;gap:6px;margin-top:14px;padding-top:10px;border-top:0.5px solid #eee;flex-wrap:wrap}
+.actions-right{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.toast{position:fixed;top:14px;right:14px;padding:9px 14px;border-radius:8px;font-size:11px;display:none;z-index:9999;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.toast.show{display:block}
+.toast.ok{background:#EAF3DE;border:0.5px solid #97C459;color:#3B6D11}
+.toast.error{background:#FCEBEB;border:0.5px solid #F09595;color:#A32D2D}
+.avail{font-size:10px;padding:3px 8px;border-radius:5px;margin-top:4px;display:none}
+.avail.ok{background:#EAF3DE;color:#3B6D11;display:block}
+</style>
+</head>
+<body>
+<div class="wrap" id="root">
+<div id="toast" class="toast"></div>
+<div class="top-bar">
+  <span class="app-badge">AIRIN CRM v1.0</span>
+  <span id="board-title-display" class="board-title-el" onclick="startTitleEdit()" title="クリックで編集">リテール お客様管理ボード</span>
+  <input id="board-title-input" class="title-input" style="display:none" onblur="endTitleEdit()" onkeydown="if(event.key==='Enter')endTitleEdit()"/>
+  <button class="btn btn-primary" style="font-size:11px;padding:5px 11px" onclick="openNew()">＋ 新規カード</button>
+  <div class="search-wrap">
+    <input class="search-input" id="search-box" placeholder="名前・電話番号で検索..." oninput="doSearch()"/>
+    <button class="search-clear" id="search-clear" onclick="clearSearch()" style="display:none">✕</button>
+    <span id="search-badge" class="search-badge" style="display:none"></span>
+  </div>
+</div>
+<div class="board" id="board"></div>
+
+<div class="modal-wrap" id="modal-wrap">
+<div class="modal">
+  <div class="modal-title" id="modal-title">新規お客様カード</div>
+  <div class="sl">基本情報</div>
+  <div class="grid4" style="margin-bottom:6px">
+    <div class="fi"><label>担当者</label><select id="f-tanto"><option value="">-</option><option>新井</option><option>宗像</option><option>野村</option><option>小屋</option><option>鈴木</option><option>南</option><option>岡部</option><option>秋本</option><option>惣藤</option></select></div>
+    <div class="fi"><label>お客様名</label><input id="f-name" placeholder="田中 太郎"/></div>
+    <div class="fi"><label>電話番号</label><input id="f-tel" placeholder="090-0000-0000" type="tel"/></div>
+    <div class="fi"><label>受付日</label><input type="date" id="f-date"/></div>
+    <div class="fi"><label>車種</label>
+      <input id="f-car" list="car-list" placeholder="選択または入力"/>
+      <datalist id="car-list"><option>N-Box</option><option>アルファード</option><option>プリウス</option><option>ヴェルファイア</option><option>ハリアー</option><option>クラウン</option><option>カローラ</option><option>フィット</option><option>ステップワゴン</option><option>セレナ</option><option>ヴォクシー</option><option>ノア</option><option>CX-5</option><option>CX-8</option><option>RAV4</option><option>ジムニー</option><option>ハイエース</option><option>タント</option><option>N-WGN</option><option>ムーヴ</option><option>スペーシア</option><option>エスティマ</option><option>デリカ</option><option>アウトランダー</option><option>エクストレイル</option><option>ヴェゼル</option><option>フリード</option><option>シエンタ</option><option>ルーミー</option><option>ヤリス</option><option>アクア</option></datalist>
+    </div>
+    <div class="fi"><label>お客様種別</label><select id="f-type"><option value="">-</option><option>一般</option><option>板金,修理工場</option><option>一般外国</option><option>仕事</option><option>外国仕事</option><option>中古車</option><option>その他法人</option></select></div>
+    <div class="fi"><label>作業内容</label><select id="f-work"><option value="">-</option><option>交換</option><option>組換え</option><option>脱着</option><option>パンク修理</option><option>持ち帰り</option><option>空気圧</option><option>増し締め</option><option>特殊作業</option><option>タイヤ保管サービス</option></select></div>
+  </div>
+  <div class="sl">予約情報</div>
+  <div class="grid3">
+    <div class="fi"><label>予約日</label><input type="date" id="f-resdate" oninput="checkAvail()"/></div>
+    <div class="fi"><label>開始時間</label>
+      <select id="f-restime" onchange="checkAvail()"><option value="">-</option>
+        <option>8:00</option><option>8:30</option><option>9:00</option><option>9:30</option>
+        <option>10:00</option><option>10:30</option><option>11:00</option><option>11:30</option>
+        <option>13:00</option><option>13:30</option><option>14:00</option><option>14:30</option>
+        <option>15:00</option><option>15:30</option><option>16:00</option><option>16:30</option>
+        <option>17:00</option><option>17:30</option>
+      </select>
+    </div>
+    <div class="fi"><label>作業時間</label>
+      <select id="f-duration" onchange="checkAvail()">
+        <option value="0.5">30分</option><option value="1" selected>1時間</option>
+        <option value="1.5">1時間30分</option><option value="2">2時間</option>
+      </select>
+    </div>
+  </div>
+  <div id="avail-msg" class="avail"></div>
+  <div class="sl">支払情報</div>
+  <div class="grid3">
+    <div class="fi"><label>支払方法</label><select id="f-pay"><option>現金</option><option>カード</option><option>電子マネー</option><option>QRコード決済</option><option>振込 済み</option><option>振込 依頼</option><option>伝票</option><option>請求書</option><option>小切手</option></select></div>
+    <div class="fi"><label>クーポン割</label><select id="f-coupon"><option>なし</option><option>当店10%OFFクーポン</option><option>あゆこ割</option></select></div>
+    <div class="fi"><label>領収書</label><select id="f-receipt"><option>発行なし</option><option>レジ</option><option>手書き</option></select></div>
+  </div>
+  <div class="sl">備考</div>
+  <textarea id="f-memo" rows="2" placeholder="メモ・特記事項など" style="width:100%"></textarea>
+  <div class="sl">現状</div>
+  <div class="chk-group">
+    <label class="chk-item"><input type="checkbox" id="st1"> 折り返し</label>
+    <label class="chk-item"><input type="checkbox" id="st2"> お客様連絡待ち</label>
+    <label class="chk-item"><input type="checkbox" id="st3"> 入荷次第連絡</label>
+    <label class="chk-item"><input type="checkbox" id="st4"> その他確認事項有</label>
+  </div>
+  <div class="sl">商品情報</div>
+  <div style="overflow-x:auto">
+    <table class="ptable" style="min-width:960px">
+      <thead><tr>
+        <th style="width:90px">商品</th><th style="width:58px">区分1</th>
+        <th style="width:50px">区分2</th><th style="width:50px">S/W</th>
+        <th style="width:64px">管理番号</th>
+        <th style="width:50px">幅</th><th style="width:46px">偏平</th>
+        <th style="width:46px">インチ</th><th style="width:64px">荷重</th>
+        <th>商品名/備考</th><th style="width:38px">数量</th>
+        <th style="width:66px">単価</th><th style="width:66px;text-align:right">小計</th>
+      </tr></thead>
+      <tbody id="product-rows"></tbody>
+      <tfoot>
+        <tr><td colspan="12" style="text-align:right;font-size:10px;color:#888;padding:3px 2px">小 計（税抜）</td><td style="text-align:right;font-size:10px;font-weight:600;white-space:nowrap;padding:3px 2px" id="sub-disp">¥0</td></tr>
+        <tr><td colspan="12" style="text-align:right;font-size:10px;color:#888;padding:3px 2px">消費税（10%）</td><td style="text-align:right;font-size:10px;font-weight:600;white-space:nowrap;padding:3px 2px" id="tax-disp">¥0</td></tr>
+        <tr style="border-top:0.5px solid #eee"><td colspan="12" style="text-align:right;font-weight:600;font-size:11px;padding:5px 2px">合 計（税込）</td><td style="text-align:right;font-weight:600;font-size:12px;padding:5px 2px;white-space:nowrap" id="total-disp">¥0</td></tr>
+      </tfoot>
+    </table>
+  </div>
+  <div class="sl">交換作業場所</div>
+  <div style="display:flex;gap:24px;flex-wrap:wrap">
+    <div>
+      <div style="font-size:10px;color:#888;margin-bottom:5px">前輪</div>
+      <div style="display:flex;gap:16px;margin-bottom:8px">
+        <label class="tire-chk"><input type="checkbox" id="t1"> ①左前</label>
+        <label class="tire-chk"><input type="checkbox" id="t2"> ②右前</label>
+      </div>
+      <div style="font-size:10px;color:#888;margin-bottom:5px">後輪</div>
+      <div style="display:flex;gap:16px">
+        <label class="tire-chk"><input type="checkbox" id="t3"> ③左後</label>
+        <label class="tire-chk"><input type="checkbox" id="t4"> ④右後</label>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:10px;color:#888;margin-bottom:5px">追加</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <label class="tire-chk"><input type="checkbox" id="t5"> ⑤</label>
+        <label class="tire-chk"><input type="checkbox" id="t6"> ⑥</label>
+        <label class="tire-chk"><input type="checkbox" id="t7"> ⑦</label>
+        <label class="tire-chk"><input type="checkbox" id="t8"> ⑧</label>
+        <label class="tire-chk"><input type="checkbox" id="t9"> ⑨</label>
+        <label class="tire-chk"><input type="checkbox" id="t10"> ⑩スペア</label>
+      </div>
+    </div>
+  </div>
+  <div class="modal-actions">
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+      <div class="fi" style="min-width:130px">
+        <label style="font-size:10px;color:#888;display:block;margin-bottom:2px">作業者</label>
+        <select id="f-worker" style="width:130px"><option value="">-</option><option>新井</option><option>宗像</option><option>野村</option><option>小屋</option><option>鈴木</option><option>南</option><option>岡部</option><option>秋本</option><option>惣藤</option></select>
+      </div>
+      <div class="fi" style="min-width:130px">
+        <label style="font-size:10px;color:#888;display:block;margin-bottom:2px">最終確認者</label>
+        <select id="f-confirm" style="width:130px"><option value="">-</option><option>新井</option><option>宗像</option><option>野村</option><option>小屋</option><option>鈴木</option><option>南</option><option>岡部</option><option>秋本</option><option>惣藤</option></select>
+      </div>
+    </div>
+    <div class="actions-right">
+      <button class="btn btn-danger" id="del-btn" onclick="deleteCard()" style="display:none">削除</button>
+      <button class="btn" onclick="closeModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveCard()">保存</button>
+      <button class="btn btn-reserve" onclick="saveAndReserve()">予約を入れる</button>
+      <button class="btn btn-sales" onclick="markSales()">売上を上げる</button>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+<script>
+const DOTS=['#E24B4A','#BA7517','#185FA5','#1D9E75','#7F77DD','#D4537E','#888780'];
+const COLS=[
+  {id:'c1',title:'問合せ未対応',color:DOTS[0],cards:[]},
+  {id:'c2',title:'お客様検討中',color:DOTS[1],cards:[]},
+  {id:'c3',title:'予約済み',color:DOTS[2],cards:[]},
+  {id:'c4',title:'担当A対応中',color:DOTS[3],cards:[]},
+  {id:'c5',title:'担当B対応中',color:DOTS[4],cards:[]},
+  {id:'c6',title:'保留中',color:DOTS[5],cards:[]},
+  {id:'c7',title:'完了',color:DOTS[6],cards:[]},
+];
+let idC=200,dragCard=null,dragFrom=null,editId=null,editColId=null,editingColId=null;
+let dragCol=null,dragColOver=null,searchQuery='';
+const STATUS_LABELS=['折り返し','お客様連絡待ち','入荷次第連絡','その他確認事項有'];
+function todayJST(){const d=new Date();const jst=new Date(d.getTime()+9*60*60*1000);return jst.toISOString().slice(0,10)}
+function uid(){return 'c'+(++idC)}
+function sortKey(c){if(c.resDate&&c.resTime){const t=c.resTime.replace(':','');return c.resDate.replace(/-/g,'')+t.padStart(4,'0')}if(c.resDate)return c.resDate.replace(/-/g,'')+'9999';if(c.date)return c.date.replace(/-/g,'')+'Z';return 'ZZZZZZZZZZ'}
+function sortCards(cards){return [...cards].sort((a,b)=>sortKey(a)<sortKey(b)?-1:sortKey(a)>sortKey(b)?1:0)}
+function norm(s){if(!s)return '';return s.replace(/[-\-ー]/g,'').replace(/[\u30A0-\u30FF]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60)).toLowerCase()}
+function doSearch(){const q=document.getElementById('search-box').value.trim();searchQuery=q;document.getElementById('search-clear').style.display=q?'block':'none';const nq=norm(q);let total=0;COLS.forEach(col=>{col.cards.forEach(c=>{const el=document.getElementById(c.id);if(!el)return;if(!q){el.classList.remove('hidden','highlight');return}const match=norm(c.name).includes(nq)||norm(c.tel).includes(nq);el.classList.toggle('hidden',!match);el.classList.toggle('highlight',match);if(match)total++;})});const badge=document.getElementById('search-badge');if(q){badge.style.display='block';badge.textContent=total+'件'}else badge.style.display='none';updateCounts()}
+function clearSearch(){document.getElementById('search-box').value='';doSearch()}
+function updateCounts(){COLS.forEach(col=>{const el=document.getElementById('count-'+col.id);if(!el)return;const vis=col.cards.filter(c=>{const ce=document.getElementById(c.id);return ce&&!ce.classList.contains('hidden')}).length;el.textContent=searchQuery?vis+'/'+col.cards.length:col.cards.length})}
+function startTitleEdit(){const d=document.getElementById('board-title-display'),i=document.getElementById('board-title-input');i.value=d.textContent;d.style.display='none';i.style.display='block';i.focus();i.select()}
+function endTitleEdit(){const d=document.getElementById('board-title-display'),i=document.getElementById('board-title-input');if(i.value.trim())d.textContent=i.value.trim();i.style.display='none';d.style.display=''}
+function startColEdit(colId){if(editingColId)endColEdit(editingColId);editingColId=colId;const col=COLS.find(c=>c.id===colId);if(!col)return;document.getElementById('col-name-'+colId).style.display='none';const inp=document.getElementById('col-input-'+colId);inp.value=col.title;inp.style.display='block';inp.focus();inp.select()}
+function endColEdit(colId){const col=COLS.find(c=>c.id===colId);if(!col)return;const inp=document.getElementById('col-input-'+colId);if(inp&&inp.value.trim())col.title=inp.value.trim();const nm=document.getElementById('col-name-'+colId);if(nm){nm.textContent=col.title;nm.style.display='';}if(inp)inp.style.display='none';editingColId=null}
+function renderBoard(){const b=document.getElementById('board');b.innerHTML='';COLS.forEach(col=>{col.cards=sortCards(col.cards);const el=document.createElement('div');el.className='column';el.dataset.colId=col.id;el.innerHTML=`<div class="col-header"><span class="col-drag-handle" title="ドラッグでカラムを移動" data-col-handle="${col.id}">⠿</span><div class="col-title-wrap"><span class="col-dot" style="background:${col.color}"></span><span class="col-name" id="col-name-${col.id}" onclick="startColEdit('${col.id}')" title="クリックで名前編集">${col.title}</span><input class="col-name-input" id="col-input-${col.id}" style="display:none" onblur="endColEdit('${col.id}')" onkeydown="if(event.key==='Enter')endColEdit('${col.id}')"/></div><span class="col-count" id="count-${col.id}">${col.cards.length}</span></div><div class="cards" id="cards-${col.id}" ondragover="onCardOver(event,'${col.id}')" ondrop="onCardDrop(event,'${col.id}')" ondragleave="onCardLeave(event,'${col.id}')"><div class="drop-zone" id="dz-${col.id}">ここへ</div>${col.cards.map(c=>cardHtml(c)).join('')}</div><button class="add-btn" onclick="openNew('${col.id}')">＋ 追加</button>`;b.appendChild(el);const handle=el.querySelector('[data-col-handle]');handle.setAttribute('draggable','true');handle.addEventListener('dragstart',e=>onColDragStart(e,col.id));el.addEventListener('dragover',e=>onColDragOver(e,col.id));el.addEventListener('drop',e=>onColDrop(e,col.id));el.addEventListener('dragleave',e=>onColDragLeave(e,col.id));el.addEventListener('dragend',onColDragEnd)});COLS.forEach(col=>col.cards.forEach(c=>{const el=document.getElementById(c.id);if(!el)return;el.setAttribute('draggable','true');el.addEventListener('dragstart',e=>onCardDragStart(e,c.id,col.id));el.addEventListener('dragend',onCardDragEnd);el.addEventListener('click',()=>openEdit(c.id,col.id))}));if(searchQuery)doSearch()}
+function onColDragStart(e,colId){dragCol=colId;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/col',colId);setTimeout(()=>{const el=document.querySelector(`.column[data-col-id="${colId}"]`);if(el)el.classList.add('col-dragging')},0)}
+function onColDragOver(e,colId){if(!dragCol||dragCol===colId)return;e.preventDefault();e.stopPropagation();document.querySelectorAll('.column').forEach(c=>c.classList.remove('col-drag-over'));const el=document.querySelector(`.column[data-col-id="${colId}"]`);if(el)el.classList.add('col-drag-over');dragColOver=colId}
+function onColDragLeave(e,colId){if(e.currentTarget.contains(e.relatedTarget))return;const el=document.querySelector(`.column[data-col-id="${colId}"]`);if(el)el.classList.remove('col-drag-over')}
+function onColDrop(e,colId){e.preventDefault();e.stopPropagation();if(!dragCol||dragCol===colId)return;const fi=COLS.findIndex(c=>c.id===dragCol),ti=COLS.findIndex(c=>c.id===colId);if(fi===-1||ti===-1)return;const[col]=COLS.splice(fi,1);COLS.splice(ti,0,col);dragCol=null;dragColOver=null;renderBoard()}
+function onColDragEnd(){dragCol=null;dragColOver=null;document.querySelectorAll('.column').forEach(c=>{c.classList.remove('col-dragging','col-drag-over')})}
+function onCardDragStart(e,cardId,colId){dragCard=cardId;dragFrom=colId;e.dataTransfer.setData('text/card',cardId);e.stopPropagation();setTimeout(()=>{const el=document.getElementById(cardId);if(el)el.classList.add('dragging')},0)}
+function onCardDragEnd(){document.querySelectorAll('.card').forEach(c=>c.classList.remove('dragging'));document.querySelectorAll('.drop-zone').forEach(z=>z.classList.remove('active'));dragCard=null;dragFrom=null}
+function onCardOver(e,colId){if(!dragCard)return;e.preventDefault();e.stopPropagation();const dz=document.getElementById('dz-'+colId);if(dz)dz.classList.add('active')}
+function onCardLeave(e,colId){if(!e.currentTarget.contains(e.relatedTarget)){const dz=document.getElementById('dz-'+colId);if(dz)dz.classList.remove('active')}}
+function onCardDrop(e,colId){e.preventDefault();e.stopPropagation();if(!dragCard)return;const fc=COLS.find(c=>c.id===dragFrom),tc=COLS.find(c=>c.id===colId);if(!fc||!tc)return;const idx=fc.cards.findIndex(c=>c.id===dragCard);if(idx===-1)return;const[card]=fc.cards.splice(idx,1);tc.cards.push(card);tc.cards=sortCards(tc.cards);renderBoard();if(window.saveToFirebase)saveToFirebase()}
+function durLabel(d){return{'0.5':'30分','1':'1時間','1.5':'1時間30分','2':'2時間'}[d]||d+'時間'}
+function cardHtml(c){const stTags=(c.status||[]).map(i=>`<span class="stag">${STATUS_LABELS[i]}</span>`).join('');const resStr=c.resDate?(c.resDate.slice(5)+' '+(c.resTime||'--:--')+' / '+durLabel(c.duration)):'予約日未設定 / '+durLabel(c.duration);return `<div class="card" id="${c.id}"><div class="card-name">${c.name||'(未入力)'}</div>${c.tel?`<div class="card-row"><svg class="card-icon" viewBox="0 0 12 12" fill="none"><path d="M2 1h3l1 3-1.5 1a7 7 0 003.5 3.5L9 7l3 1v3a1 1 0 01-1 1C4.5 12 0 7.5 0 2a1 1 0 011-1h1z" fill="currentColor"/></svg><span>${c.tel}</span></div>`:''} ${c.tanto?`<div class="card-row"><svg class="card-icon" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="4" r="3" fill="currentColor"/><path d="M0 11c0-3 2.7-5 6-5s6 2 6 5" fill="currentColor"/></svg><span>${c.tanto}</span></div>`:''}<div class="card-row"><svg class="card-icon" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="9" rx="1" stroke="currentColor" stroke-width="1" fill="none"/><path d="M4 1v2M8 1v2M1 5h10" stroke="currentColor" stroke-width="1"/></svg><span>${resStr}</span></div>${stTags?`<div class="card-status">${stTags}</div>`:''}${c.grandTotal>0?`<div class="card-amount"><span class="amount-label">税込合計</span><span class="amount-val">¥${c.grandTotal.toLocaleString()}</span></div>`:''}</div>`}
+function buildRows(){const tb=document.getElementById('product-rows');tb.innerHTML='';for(let i=0;i<6;i++){const tr=document.createElement('tr');tr.innerHTML=`<td><select class="pi"><option value="">-</option><option>PC</option><option>LT</option><option>TB</option><option>工賃</option><option>廃タイヤ処分代</option><option>タイヤ袋</option><option>ウエイト</option><option>チューブ</option><option>キャップ</option><option>ナット</option><option>会員バルブ</option></select></td><td><select class="pk"><option value="">-</option><option>タイヤ</option><option>アルミ</option><option>鉄</option></select></td><td><select class="pn"><option value="">-</option><option>新品</option><option>ｺﾛｶﾞｼ</option><option>中古</option><option>90%</option><option>80%</option><option>70%</option><option>60%</option><option>50%以下</option></select></td><td><select class="ps"><option value="">-</option><option>夏</option><option>冬</option><option>夏冬</option></select></td><td><input type="text" class="pcode" maxlength="10" style="width:100%;font-size:10px"></td><td><input type="number" class="pw" style="width:100%;font-size:11px;padding:3px 3px"></td><td><input type="number" class="ph" style="width:100%;font-size:11px;padding:3px 3px"></td><td><input type="number" class="pinch" style="width:100%;font-size:11px;padding:3px 3px"></td><td><input type="text" class="pl" maxlength="8" style="width:100%;font-size:10px"></td><td><input type="text" class="pmemo" style="width:100%;font-size:10px"></td><td><input type="number" class="pq" style="width:100%;font-size:11px;padding:3px 3px" oninput="calcTotal()"></td><td><input type="number" class="pp" style="width:100%;font-size:10px" oninput="calcTotal()"></td><td class="sub-cell" style="text-align:right;font-size:10px">-</td>`;tb.appendChild(tr)}}
+function calcTotal(){let sub=0;document.querySelectorAll('#product-rows tr').forEach(tr=>{const q=parseFloat(tr.querySelector('.pq')?.value)||0,p=parseFloat(tr.querySelector('.pp')?.value)||0,s=q*p;tr.querySelector('.sub-cell').textContent=s>0?'¥'+s.toLocaleString():'-';sub+=s});const tax=Math.round(sub*0.1);document.getElementById('sub-disp').textContent='¥'+Math.round(sub).toLocaleString();document.getElementById('tax-disp').textContent='¥'+tax.toLocaleString();document.getElementById('total-disp').textContent='¥'+(Math.round(sub)+tax).toLocaleString()}
+function gv(id){return document.getElementById(id)?.value||''}
+function sv(id,v){const el=document.getElementById(id);if(el)el.value=v??''}
+function gc(id){return document.getElementById(id)?.checked||false}
+function sc(id,v){const el=document.getElementById(id);if(el)el.checked=!!v}
+function openNew(colId){editId=null;editColId=colId||'c1';document.getElementById('modal-title').textContent='新規お客様カード';document.getElementById('del-btn').style.display='none';['tanto','name','tel','car','type','work','resdate','restime','worker','confirm'].forEach(f=>sv('f-'+f,''));sv('f-coupon','なし');sv('f-pay','現金');sv('f-receipt','発行なし');sv('f-duration','1');sv('f-memo','');sv('f-date',todayJST());buildRows();for(let i=1;i<=10;i++)sc('t'+i,false);for(let i=1;i<=4;i++)sc('st'+i,false);document.getElementById('avail-msg').className='avail';isModalOpen=true;document.getElementById('modal-wrap').classList.add('open')}
+function openEdit(cardId,colId){const col=COLS.find(c=>c.id===colId),card=col?.cards.find(c=>c.id===cardId);if(!card)return;editId=cardId;editColId=colId;document.getElementById('modal-title').textContent='カード編集 — '+card.name;document.getElementById('del-btn').style.display='block';sv('f-tanto',card.tanto);sv('f-name',card.name);sv('f-tel',card.tel);sv('f-date',card.date);sv('f-car',card.car);sv('f-type',card.type);sv('f-work',card.work);sv('f-resdate',card.resDate);sv('f-restime',card.resTime);sv('f-duration',card.duration||'1');sv('f-pay',card.pay||'現金');sv('f-coupon',card.coupon||'なし');sv('f-receipt',card.receipt||'発行なし');sv('f-memo',card.memo||'');sv('f-worker',card.worker);sv('f-confirm',card.confirm);buildRows();(card.products||[]).forEach((p,i)=>{const rows=document.querySelectorAll('#product-rows tr');if(!rows[i])return;rows[i].querySelector('.pi').value=p.item||'';rows[i].querySelector('.pk').value=p.kbn||'';rows[i].querySelector('.pn').value=p.newUsed||'';rows[i].querySelector('.ps').value=p.season||'';rows[i].querySelector('.pcode').value=p.code||'';rows[i].querySelector('.pw').value=p.w||'';rows[i].querySelector('.ph').value=p.h||'';rows[i].querySelector('.pinch').value=p.inch||'';rows[i].querySelector('.pl').value=p.load||'';rows[i].querySelector('.pmemo').value=p.memo||'';rows[i].querySelector('.pq').value=p.qty||'';rows[i].querySelector('.pp').value=p.price||''});calcTotal();for(let i=1;i<=10;i++)sc('t'+i,(card.tires||[]).includes(i));for(let i=1;i<=4;i++)sc('st'+i,(card.status||[]).includes(i-1));document.getElementById('avail-msg').className='avail';isModalOpen=true;document.getElementById('modal-wrap').classList.add('open')}
+function closeModal(){isModalOpen=false;document.getElementById('modal-wrap').classList.remove('open')}
+function collectCard(){const products=[];document.querySelectorAll('#product-rows tr').forEach(tr=>{const item=tr.querySelector('.pi')?.value,qty=parseFloat(tr.querySelector('.pq')?.value)||0,price=parseFloat(tr.querySelector('.pp')?.value)||0;if(item&&(qty>0||price>0))products.push({item,kbn:tr.querySelector('.pk')?.value,newUsed:tr.querySelector('.pn')?.value,season:tr.querySelector('.ps')?.value,code:tr.querySelector('.pcode')?.value||'',w:tr.querySelector('.pw')?.value,h:tr.querySelector('.ph')?.value,inch:tr.querySelector('.pinch')?.value,load:tr.querySelector('.pl')?.value,memo:tr.querySelector('.pmemo')?.value,qty,price,sub:qty*price})});const tires=[];for(let i=1;i<=10;i++){if(gc('t'+i))tires.push(i)}const status=[];for(let i=1;i<=4;i++){if(gc('st'+i))status.push(i-1)}const subtotal=Math.round(products.reduce((s,p)=>s+p.sub,0)),tax=Math.round(subtotal*0.1);return{id:editId||uid(),name:gv('f-name'),tanto:gv('f-tanto'),tel:gv('f-tel'),date:gv('f-date'),car:gv('f-car'),type:gv('f-type'),work:gv('f-work'),resDate:gv('f-resdate'),resTime:gv('f-restime'),duration:gv('f-duration'),pay:gv('f-pay'),coupon:gv('f-coupon'),receipt:gv('f-receipt'),memo:gv('f-memo'),worker:gv('f-worker'),confirm:gv('f-confirm'),products,tires,status,total:subtotal,tax,grandTotal:subtotal+tax}}
+function upsertCard(card){if(editId){const col=COLS.find(c=>c.id===editColId),idx=col?.cards.findIndex(c=>c.id===editId);if(idx!==-1){col.cards[idx]=card;col.cards=sortCards(col.cards)}}else{const col=COLS.find(c=>c.id===editColId)||COLS[0];col.cards.push(card);col.cards=sortCards(col.cards)}}
+function saveCard(){const card=collectCard();upsertCard(card);closeModal();renderBoard();if(window.saveToFirebase)saveToFirebase();showToast('保存しました','ok')}
+function deleteCard(){if(!confirm('このカードを削除しますか？'))return;const col=COLS.find(c=>c.id===editColId);if(col)col.cards=col.cards.filter(c=>c.id!==editId);closeModal();renderBoard();showToast('削除しました','ok')}
+const GS_URL='https://script.google.com/macros/s/AKfycbwlV4FLTYy_18e4EyiQ-swCq9Lvxj81vWQKwnNvecL3vPd1oG4rmCi53DHUr6UPe-Q/exec';
+function saveAndReserve(){
+  const card=collectCard();
+  if(!card.resDate||!card.resTime){showToast('予約日時を入力してください','error');return}
+  if(!card.name){showToast('お客様名を入力してください','error');return}
+  const btn=document.querySelector('.btn-reserve');
+  if(btn){btn.textContent='送信中...';btn.disabled=true;}
+  showToast('予約シートに送信中...','ok');
+  const cbName='_cb'+Date.now();
+  const timer=setTimeout(()=>{
+    delete window[cbName];
+    document.getElementById('_jsonp_script')?.remove();
+    if(btn){btn.textContent='予約を入れる';btn.disabled=false;}
+    showToast('タイムアウト: シートを直接確認してください','error');
+  },30000);
+  window[cbName]=function(result){
+    clearTimeout(timer);
+    delete window[cbName];
+    document.getElementById('_jsonp_script')?.remove();
+    if(btn){btn.textContent='予約を入れる';btn.disabled=false;}
+    if(result.ok){
+      if(editId){upsertCard(card)}else{editId=card.id;editColId='c3';const col=COLS.find(c=>c.id==='c3');col.cards.push(card);col.cards=sortCards(col.cards)}
+      closeModal();renderBoard();
+      showToast('✓ '+(result.message||'予約しました'),'ok');
+    } else {
+      showToast('予約できません: '+(result.error||'不明なエラー'),'error');
+    }
+  };
+  const s=document.createElement('script');
+  s.id='_jsonp_script';
+  s.src=GS_URL+'?callback='+cbName+'&data='+encodeURIComponent(JSON.stringify(card));
+  console.log('予約送信URL:', s.src.slice(0,80)+'...');
+  document.head.appendChild(s);
+}
+function markSales(){
+  const card=collectCard();
+  if(!card.name){showToast('お客様名を入力してください','error');return}
+  if(card.grandTotal<=0){showToast('商品情報・金額を入力してください','error');return}
+  // カンバンボードの完了カラムへ移動
+  COLS.forEach(c=>{c.cards=c.cards.filter(x=>x.id!==card.id)});
+  const col=COLS.find(c=>c.id==='c7');
+  col.cards.push(card);col.cards=sortCards(col.cards);
+  closeModal();renderBoard();
+  showToast('売上シートに送信中...','ok');
+  // JSONP方式で売上シートに送信
+  const cbName='_scb'+Date.now();
+  const timer=setTimeout(()=>{
+    delete window[cbName];
+    document.getElementById('_sales_script')?.remove();
+    showToast('タイムアウト: 売上シートを直接確認してください','error');
+  },30000);
+  window[cbName]=function(result){
+    clearTimeout(timer);
+    delete window[cbName];
+    document.getElementById('_sales_script')?.remove();
+    if(result.ok){
+      showToast('✓ 売上登録完了: '+card.name+' ¥'+card.grandTotal.toLocaleString()+'（税込）','ok');
+    } else {
+      showToast('売上登録エラー: '+(result.error||'不明なエラー'),'error');
+    }
+  };
+  const s=document.createElement('script');
+  s.id='_sales_script';
+  s.src=GS_URL+'?action=sales&callback='+cbName+'&data='+encodeURIComponent(JSON.stringify(card));
+  console.log('売上送信URL:', s.src.slice(0,80)+'...');
+  document.head.appendChild(s);
+}
+function endTime(t,dur){const[h,m]=t.split(':').map(Number),e=h*60+m+Math.round(dur*60);return `${Math.floor(e/60)}:${String(e%60).padStart(2,'0')}`}
+function checkAvail(){const d=gv('f-resdate'),t=gv('f-restime'),dur=parseFloat(gv('f-duration')||'1'),msg=document.getElementById('avail-msg');if(!d||!t){msg.className='avail';return}msg.textContent=`${d} ${t} 〜 ${endTime(t,dur)} に予約を入れます`;msg.className='avail ok'}
+function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;setTimeout(()=>t.classList.remove('show'),4500)}
+renderBoard();
+</script>
+
+
+
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBsU8QHwCHk-Ys75TgvKp10NiGKpVbXycI",
+  authDomain: "airin-crm.firebaseapp.com",
+  databaseURL: "https://airin-crm-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "airin-crm",
+  storageBucket: "airin-crm.firebasestorage.app",
+  messagingSenderId: "933502384767",
+  appId: "1:933502384767:web:e62fba2db2b45154cb9d4a"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// Firebaseにデータを保存
+window.saveToFirebase = function() {
+  const saveData = { cols: {} };
+  COLS.forEach(col => {
+    const cardsObj = {};
+    col.cards.forEach(card => { cardsObj[card.id] = card; });
+    saveData.cols[col.id] = { title: col.title, cards: cardsObj };
+  });
+  db.ref('board').set(saveData)
+    .then(() => console.log('Firebase保存成功'))
+    .catch(err => console.error('Firebase保存エラー:', err));
+};
+
+// Firebaseからリアルタイムでデータを読み込む
+let isModalOpen = false;
+db.ref('board').on('value', (snapshot) => {
+  const data = snapshot.val();
+  if (!data || !data.cols) return;
+  // モーダルが開いている間は画面を更新しない（入力中のデータを守る）
+  if (isModalOpen) return;
+  COLS.forEach(col => {
+    if (data.cols[col.id]) {
+      col.title = data.cols[col.id].title || col.title;
+      const cards = data.cols[col.id].cards;
+      col.cards = cards ? Object.values(cards) : [];
+    } else {
+      col.cards = [];
+    }
+  });
+  renderBoard();
+  console.log('Firebase読み込み成功');
+});
+</script>
+
+</body>
+</html>
