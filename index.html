@@ -270,9 +270,9 @@ function gv(id){return document.getElementById(id)?.value||''}
 function sv(id,v){const el=document.getElementById(id);if(el)el.value=v??''}
 function gc(id){return document.getElementById(id)?.checked||false}
 function sc(id,v){const el=document.getElementById(id);if(el)el.checked=!!v}
-function openNew(colId){editId=null;editColId=colId||'c1';document.getElementById('modal-title').textContent='新規お客様カード';document.getElementById('del-btn').style.display='none';['tanto','name','tel','car','type','work','resdate','restime','worker','confirm'].forEach(f=>sv('f-'+f,''));sv('f-coupon','なし');sv('f-pay','現金');sv('f-receipt','発行なし');sv('f-duration','1');sv('f-memo','');sv('f-date',todayJST());buildRows();for(let i=1;i<=10;i++)sc('t'+i,false);for(let i=1;i<=4;i++)sc('st'+i,false);document.getElementById('avail-msg').className='avail';document.getElementById('modal-wrap').classList.add('open')}
-function openEdit(cardId,colId){const col=COLS.find(c=>c.id===colId),card=col?.cards.find(c=>c.id===cardId);if(!card)return;editId=cardId;editColId=colId;document.getElementById('modal-title').textContent='カード編集 — '+card.name;document.getElementById('del-btn').style.display='block';sv('f-tanto',card.tanto);sv('f-name',card.name);sv('f-tel',card.tel);sv('f-date',card.date);sv('f-car',card.car);sv('f-type',card.type);sv('f-work',card.work);sv('f-resdate',card.resDate);sv('f-restime',card.resTime);sv('f-duration',card.duration||'1');sv('f-pay',card.pay||'現金');sv('f-coupon',card.coupon||'なし');sv('f-receipt',card.receipt||'発行なし');sv('f-memo',card.memo||'');sv('f-worker',card.worker);sv('f-confirm',card.confirm);buildRows();(card.products||[]).forEach((p,i)=>{const rows=document.querySelectorAll('#product-rows tr');if(!rows[i])return;rows[i].querySelector('.pi').value=p.item||'';rows[i].querySelector('.pk').value=p.kbn||'';rows[i].querySelector('.pn').value=p.newUsed||'';rows[i].querySelector('.ps').value=p.season||'';rows[i].querySelector('.pcode').value=p.code||'';rows[i].querySelector('.pw').value=p.w||'';rows[i].querySelector('.ph').value=p.h||'';rows[i].querySelector('.pinch').value=p.inch||'';rows[i].querySelector('.pl').value=p.load||'';rows[i].querySelector('.pmemo').value=p.memo||'';rows[i].querySelector('.pq').value=p.qty||'';rows[i].querySelector('.pp').value=p.price||''});calcTotal();for(let i=1;i<=10;i++)sc('t'+i,(card.tires||[]).includes(i));for(let i=1;i<=4;i++)sc('st'+i,(card.status||[]).includes(i-1));document.getElementById('avail-msg').className='avail';document.getElementById('modal-wrap').classList.add('open')}
-function closeModal(){document.getElementById('modal-wrap').classList.remove('open')}
+function openNew(colId){editId=null;editColId=colId||'c1';document.getElementById('modal-title').textContent='新規お客様カード';document.getElementById('del-btn').style.display='none';['tanto','name','tel','car','type','work','resdate','restime','worker','confirm'].forEach(f=>sv('f-'+f,''));sv('f-coupon','なし');sv('f-pay','現金');sv('f-receipt','発行なし');sv('f-duration','1');sv('f-memo','');sv('f-date',todayJST());buildRows();for(let i=1;i<=10;i++)sc('t'+i,false);for(let i=1;i<=4;i++)sc('st'+i,false);document.getElementById('avail-msg').className='avail';isModalOpen=true;document.getElementById('modal-wrap').classList.add('open')}
+function openEdit(cardId,colId){const col=COLS.find(c=>c.id===colId),card=col?.cards.find(c=>c.id===cardId);if(!card)return;editId=cardId;editColId=colId;document.getElementById('modal-title').textContent='カード編集 — '+card.name;document.getElementById('del-btn').style.display='block';sv('f-tanto',card.tanto);sv('f-name',card.name);sv('f-tel',card.tel);sv('f-date',card.date);sv('f-car',card.car);sv('f-type',card.type);sv('f-work',card.work);sv('f-resdate',card.resDate);sv('f-restime',card.resTime);sv('f-duration',card.duration||'1');sv('f-pay',card.pay||'現金');sv('f-coupon',card.coupon||'なし');sv('f-receipt',card.receipt||'発行なし');sv('f-memo',card.memo||'');sv('f-worker',card.worker);sv('f-confirm',card.confirm);buildRows();(card.products||[]).forEach((p,i)=>{const rows=document.querySelectorAll('#product-rows tr');if(!rows[i])return;rows[i].querySelector('.pi').value=p.item||'';rows[i].querySelector('.pk').value=p.kbn||'';rows[i].querySelector('.pn').value=p.newUsed||'';rows[i].querySelector('.ps').value=p.season||'';rows[i].querySelector('.pcode').value=p.code||'';rows[i].querySelector('.pw').value=p.w||'';rows[i].querySelector('.ph').value=p.h||'';rows[i].querySelector('.pinch').value=p.inch||'';rows[i].querySelector('.pl').value=p.load||'';rows[i].querySelector('.pmemo').value=p.memo||'';rows[i].querySelector('.pq').value=p.qty||'';rows[i].querySelector('.pp').value=p.price||''});calcTotal();for(let i=1;i<=10;i++)sc('t'+i,(card.tires||[]).includes(i));for(let i=1;i<=4;i++)sc('st'+i,(card.status||[]).includes(i-1));document.getElementById('avail-msg').className='avail';isModalOpen=true;document.getElementById('modal-wrap').classList.add('open')}
+function closeModal(){isModalOpen=false;document.getElementById('modal-wrap').classList.remove('open')}
 function collectCard(){const products=[];document.querySelectorAll('#product-rows tr').forEach(tr=>{const item=tr.querySelector('.pi')?.value,qty=parseFloat(tr.querySelector('.pq')?.value)||0,price=parseFloat(tr.querySelector('.pp')?.value)||0;if(item&&(qty>0||price>0))products.push({item,kbn:tr.querySelector('.pk')?.value,newUsed:tr.querySelector('.pn')?.value,season:tr.querySelector('.ps')?.value,code:tr.querySelector('.pcode')?.value||'',w:tr.querySelector('.pw')?.value,h:tr.querySelector('.ph')?.value,inch:tr.querySelector('.pinch')?.value,load:tr.querySelector('.pl')?.value,memo:tr.querySelector('.pmemo')?.value,qty,price,sub:qty*price})});const tires=[];for(let i=1;i<=10;i++){if(gc('t'+i))tires.push(i)}const status=[];for(let i=1;i<=4;i++){if(gc('st'+i))status.push(i-1)}const subtotal=Math.round(products.reduce((s,p)=>s+p.sub,0)),tax=Math.round(subtotal*0.1);return{id:editId||uid(),name:gv('f-name'),tanto:gv('f-tanto'),tel:gv('f-tel'),date:gv('f-date'),car:gv('f-car'),type:gv('f-type'),work:gv('f-work'),resDate:gv('f-resdate'),resTime:gv('f-restime'),duration:gv('f-duration'),pay:gv('f-pay'),coupon:gv('f-coupon'),receipt:gv('f-receipt'),memo:gv('f-memo'),worker:gv('f-worker'),confirm:gv('f-confirm'),products,tires,status,total:subtotal,tax,grandTotal:subtotal+tax}}
 function upsertCard(card){if(editId){const col=COLS.find(c=>c.id===editColId),idx=col?.cards.findIndex(c=>c.id===editId);if(idx!==-1){col.cards[idx]=card;col.cards=sortCards(col.cards)}}else{const col=COLS.find(c=>c.id===editColId)||COLS[0];col.cards.push(card);col.cards=sortCards(col.cards)}}
 function saveCard(){const card=collectCard();upsertCard(card);closeModal();renderBoard();if(window.saveToFirebase)saveToFirebase();showToast('保存しました','ok')}
@@ -308,7 +308,8 @@ function saveAndReserve(){
   const s=document.createElement('script');
   s.id='_jsonp_script';
   s.src=GS_URL+'?callback='+cbName+'&data='+encodeURIComponent(JSON.stringify(card));
-  document.body.appendChild(s);
+  console.log('予約送信URL:', s.src.slice(0,80)+'...');
+  document.head.appendChild(s);
 }
 function markSales(){
   const card=collectCard();
@@ -340,7 +341,8 @@ function markSales(){
   const s=document.createElement('script');
   s.id='_sales_script';
   s.src=GS_URL+'?action=sales&callback='+cbName+'&data='+encodeURIComponent(JSON.stringify(card));
-  document.body.appendChild(s);
+  console.log('売上送信URL:', s.src.slice(0,80)+'...');
+  document.head.appendChild(s);
 }
 function endTime(t,dur){const[h,m]=t.split(':').map(Number),e=h*60+m+Math.round(dur*60);return `${Math.floor(e/60)}:${String(e%60).padStart(2,'0')}`}
 function checkAvail(){const d=gv('f-resdate'),t=gv('f-restime'),dur=parseFloat(gv('f-duration')||'1'),msg=document.getElementById('avail-msg');if(!d||!t){msg.className='avail';return}msg.textContent=`${d} ${t} 〜 ${endTime(t,dur)} に予約を入れます`;msg.className='avail ok'}
@@ -382,9 +384,12 @@ window.saveToFirebase = function() {
 };
 
 // Firebaseからリアルタイムでデータを読み込む
+let isModalOpen = false;
 db.ref('board').on('value', (snapshot) => {
   const data = snapshot.val();
   if (!data || !data.cols) return;
+  // モーダルが開いている間は画面を更新しない（入力中のデータを守る）
+  if (isModalOpen) return;
   COLS.forEach(col => {
     if (data.cols[col.id]) {
       col.title = data.cols[col.id].title || col.title;
