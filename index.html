@@ -645,7 +645,7 @@ function openEdit(cardId, colId){
   sv('f-tanto',card.tanto); sv('f-name',card.name); sv('f-tel',card.tel);
   sv('f-date',card.date); sv('f-car',card.car); sv('f-type',card.type);
   sv('f-work',card.work); sv('f-resdate',card.resDate); sv('f-restime',card.resTime);
-  sv('f-dur',card.duration||'1'); sv('f-pay',card.pay||'現金');
+  sv('f-dur',card.duration||'1'); sv('f-pay',card.pay||'-');
   sv('f-coupon',card.coupon||'なし'); sv('f-receipt',card.receipt||'発行なし');
   sv('f-memo',card.memo||''); sv('f-worker',card.worker); sv('f-confirm',card.confirm);
   buildRows();
