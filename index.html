@@ -758,7 +758,7 @@ function buildRows(){
   }
 }
 
-const DISCOUNT_KBN = ['タイヤ','アルミ','鉄','タイヤアルミセット','タイヤ鉄セット'];
+const DISCOUNT_KBN = ['タイヤ'];
 function calcTotal(){
   const coupon = gv('f-coupon');
   const discRate = coupon==='当店10%OFFクーポン'?0.1 : coupon==='あゆこ割'?0.05 : 0;
@@ -768,9 +768,26 @@ function calcTotal(){
     const p=parseFloat(tr.querySelector('.pp')?.value)||0;
     const kbn=tr.querySelector('.pk')?.value||'';
     const s=q*p;
+    const isDiscTarget = discRate>0 && DISCOUNT_KBN.includes(kbn) && q>0 && p>0;
     tr.querySelector('.sc').textContent=s>0?'¥'+s.toLocaleString():'-';
     sub+=s;
-    if(discRate>0 && DISCOUNT_KBN.includes(kbn)) discTotal+=s;
+    if(isDiscTarget) discTotal+=s;
+    // 割引後単価を行に表示
+    let discPriceEl = tr.querySelector('.disc-price');
+    if(!discPriceEl){
+      // 単価セルの下に赤字で追加
+      const ppCell = tr.querySelector('.pp').parentNode;
+      discPriceEl = document.createElement('div');
+      discPriceEl.className = 'disc-price';
+      discPriceEl.style.cssText = 'font-size:9px;color:#E24B4A;font-weight:600;margin-top:1px;text-align:right';
+      ppCell.appendChild(discPriceEl);
+    }
+    if(isDiscTarget){
+      const discPrice = Math.round(p*(1-discRate));
+      discPriceEl.textContent = '割引後 ¥'+discPrice.toLocaleString()+'/本';
+    } else {
+      discPriceEl.textContent = '';
+    }
   });
   const discAmt=Math.round(discTotal*discRate);
   const discedSub=Math.round(sub)-discAmt;
