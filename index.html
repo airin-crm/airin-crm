@@ -122,6 +122,30 @@ button{font-family:inherit;cursor:pointer}
 .avail.ok{background:#EAF3DE;color:#3B6D11;display:block}
 
 /* トースト */
+/* 印刷スタイル A5横向き */
+@media print {
+  @page { size: A5 landscape; margin: 8mm; }
+  body > *:not(#print-area) { display: none !important; }
+  #print-area { display: block !important; font-family: -apple-system, sans-serif; font-size: 10pt; color: #000; }
+  .print-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6mm; padding-bottom: 3mm; border-bottom: 1px solid #333; }
+  .print-title { font-size: 14pt; font-weight: 700; }
+  .print-date { font-size: 9pt; color: #555; }
+  .print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; margin-bottom: 4mm; }
+  .print-section { margin-bottom: 4mm; }
+  .print-section-title { font-size: 8pt; font-weight: 700; color: #666; border-bottom: 0.5px solid #ccc; padding-bottom: 1mm; margin-bottom: 2mm; text-transform: uppercase; }
+  .print-row { display: flex; gap: 2mm; margin-bottom: 1.5mm; font-size: 9pt; }
+  .print-label { color: #666; min-width: 20mm; flex-shrink: 0; }
+  .print-value { font-weight: 500; }
+  .print-table { width: 100%; border-collapse: collapse; font-size: 8pt; margin-top: 2mm; }
+  .print-table th { background: #f0f0f0; padding: 2mm 2mm; text-align: left; border: 0.5px solid #ccc; font-weight: 700; }
+  .print-table td { padding: 1.5mm 2mm; border: 0.5px solid #ccc; }
+  .print-total { text-align: right; margin-top: 2mm; font-size: 11pt; font-weight: 700; }
+  .print-status { display: flex; gap: 3mm; flex-wrap: wrap; margin-top: 2mm; }
+  .print-stag { border: 1px solid #E24B4A; color: #E24B4A; padding: 0.5mm 2mm; border-radius: 3mm; font-size: 8pt; font-weight: 600; }
+  .print-urgent { background: #E24B4A; color: #fff; padding: 1mm 3mm; border-radius: 3mm; font-size: 9pt; font-weight: 700; }
+}
+#print-area { display: none; }
+
 /* 未対応警告ポップアップ */
 .alert-popup{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:2000;display:none;align-items:center;justify-content:center}
 .alert-popup.open{display:flex}
@@ -158,6 +182,7 @@ button{font-family:inherit;cursor:pointer}
     <span style="font-size:10px;color:#666;white-space:nowrap">未対応警告</span>
     <input type="number" id="alert-min" value="30" min="1" max="999" style="width:48px;font-size:11px;padding:2px 4px;text-align:center;border:0.5px solid #ccc;border-radius:4px">
     <span style="font-size:10px;color:#666">分</span>
+    <button onclick="saveAlertMin()" style="font-size:10px;padding:2px 8px;border-radius:4px;border:0.5px solid #185FA5;background:#185FA5;color:#fff;cursor:pointer;font-weight:600">設定</button>
   </div>
   <button class="btn-new" onclick="openNew(null)">＋ 新規カード</button>
   <div class="search-wrap">
@@ -293,6 +318,7 @@ button{font-family:inherit;cursor:pointer}
     <div class="mright">
       <button class="btn btn-d" id="del-btn" onclick="confirmDelete()" style="display:none">削除</button>
       <button class="btn" onclick="closeModal()">キャンセル</button>
+      <button class="btn" onclick="printCard()" style="border-color:#888">🖨 印刷</button>
       <button class="btn btn-p" onclick="saveCard()">保存</button>
       <button class="btn btn-r" id="res-btn" onclick="saveAndReserve()">予約を入れる</button>
       <button class="btn btn-s" onclick="markSales()">売上を上げる</button>
@@ -302,6 +328,7 @@ button{font-family:inherit;cursor:pointer}
 </div>
 
 <div id="toast" class="toast"></div>
+<div id="print-area"></div>
 
 <!-- 未対応警告ポップアップ -->
 <div class="alert-popup" id="alert-popup">
@@ -376,6 +403,22 @@ db.ref('.info/connected').on('value', snap => {
   if(snap.val()){ el.textContent='● 同期中'; el.className='sync-status on'; }
   else { el.textContent='○ 切断中'; el.className='sync-status off'; }
 });
+
+// 警告時間をFirebaseから読み込み（全員で共有）
+db.ref('settings/alertMin').on('value', snap => {
+  const val = snap.val();
+  if(val && !isNaN(val)){
+    const inp = document.getElementById('alert-min');
+    if(inp) inp.value = val;
+  }
+});
+
+function saveAlertMin(){
+  const val = parseInt(document.getElementById('alert-min')?.value)||30;
+  db.ref('settings/alertMin').set(val)
+    .then(()=>showToast('警告時間を'+val+'分に設定しました（全員に反映）','ok'))
+    .catch(e=>showToast('設定エラー: '+e.message,'error'));
+}
 
 function saveToFirebase(){
   const data={cols:{}};
@@ -859,10 +902,12 @@ function saveCard(){
   if(!card.name){ showToast('お客様名を入力してください','error'); return; }
   isSyncing=true;
   if(editCardId){
+    // 既存カード編集 → 元のカラムに残す
     const col=COLS.find(c=>c.id===editColId);
     if(col){ const idx=col.cards.findIndex(c=>c.id===editCardId); if(idx!==-1) col.cards[idx]=card; }
   } else {
-    const col=COLS.find(c=>c.id===(editColId||'c1'))||COLS[0];
+    // 新規カード → 常に問合せ未対応（c1）へ
+    const col=COLS.find(c=>c.id==='c1')||COLS[0];
     col.cards.push(card);
   }
   saveToFirebase();
@@ -898,18 +943,19 @@ function saveAndReserve(){
   const btn=document.getElementById('res-btn');
   btn.disabled=true; btn.textContent='送信中...';
   isSyncing=true;
-  // カードを予約済みへ
+  // 予約を入れる → 常に予約済み（c3）へ移動
   if(editCardId){
-    const col=COLS.find(c=>c.id===editColId);
-    if(col){ const idx=col.cards.findIndex(c=>c.id===editCardId); if(idx!==-1) col.cards[idx]=card; }
-  } else {
-    editCardId=card.id; editColId='c3';
-    const col=COLS.find(c=>c.id==='c3')||COLS[0];
-    col.cards.push(card);
+    // 元のカラムから削除
+    COLS.forEach(c=>{ c.cards=c.cards.filter(x=>x.id!==editCardId); });
   }
+  // c3（予約済み）へ追加
+  const resCol=COLS.find(c=>c.id==='c3')||COLS[0];
+  resCol.cards.push(card);
+  resCol.cards=sortCards(resCol.cards);
+  editCardId=card.id; editColId='c3';
   saveToFirebase();
   closeModal();
-  setTimeout(()=>{ isSyncing=false; renderBoard(); },300);
+  setTimeout(()=>{ isSyncing=false; renderBoard(); showToast('予約済みに移動しました','ok'); },300);
   // GAS送信
   jsonpCall(GS_URL+'?action=reserve&callback={CB}&data='+encodeURIComponent(JSON.stringify(card)),30000)
     .then(r=>{ if(r.ok) showToast('✓ '+r.message,'ok'); else showToast('予約エラー: '+r.error,'error'); })
@@ -932,6 +978,96 @@ function markSales(){
   jsonpCall(GS_URL+'?action=sales&callback={CB}&data='+encodeURIComponent(JSON.stringify(card)),30000)
     .then(r=>{ if(r.ok) showToast('✓ 売上登録: '+card.name+' ¥'+card.grandTotal.toLocaleString()+'（税込）','ok'); else showToast('売上エラー: '+r.error,'error'); })
     .catch(e=>showToast('売上通信エラー: '+e,'error'));
+}
+
+// ================================================================
+// 印刷
+// ================================================================
+function printCard(){
+  const card = collectCard();
+  const now = new Date();
+  const dateStr = now.getFullYear()+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+
+  const statusHtml = (card.status||[]).map(i=>{
+    if(i===4) return `<span class="print-urgent">🔴 大至急連絡！</span>`;
+    return `<span class="print-stag">${esc(STATUS_LABELS[i])}</span>`;
+  }).join('');
+
+  const tiresStr = (card.tires||[]).map(n=>'①②③④⑤⑥⑦⑧⑨⑩'[n-1]).filter(Boolean).join(' ');
+
+  const discRate = card.coupon==='当店10%OFFクーポン'?0.1:card.coupon==='あゆこ割'?0.05:0;
+
+  const productRows = (card.products||[]).map(p=>{
+    const sub = (p.qty||0)*(p.price||0);
+    const isDisc = discRate>0 && p.kbn==='タイヤ';
+    const discPrice = isDisc ? Math.round(p.price*(1-discRate)) : null;
+    const sizeStr = [p.w,p.h?'/'+p.h:'',p.inch?'R'+p.inch:''].join('');
+    return `<tr>
+      <td>${esc(p.item||'')}</td>
+      <td>${esc(p.kbn||'')}</td>
+      <td>${esc(p.newUsed||'')}</td>
+      <td>${esc(p.season||'')}</td>
+      <td>${esc(p.code||'')}</td>
+      <td>${sizeStr}</td>
+      <td>${esc(p.load||'')}</td>
+      <td>${esc(p.memo||'')}</td>
+      <td style="text-align:right">${p.qty||''}</td>
+      <td style="text-align:right">${p.price?'¥'+Number(p.price).toLocaleString():''}${discPrice?'<br><span style="color:#E24B4A;font-size:7pt">割引後 ¥'+discPrice.toLocaleString()+'</span>':''}</td>
+      <td style="text-align:right">${sub>0?'¥'+Math.round(isDisc?sub*(1-discRate):sub).toLocaleString():''}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `
+    <div class="print-header">
+      <div class="print-title">お客様カード — ${esc(card.name||'(未入力)')}</div>
+      <div class="print-date">印刷日時: ${dateStr}</div>
+    </div>
+    ${statusHtml?`<div class="print-status">${statusHtml}</div>`:'' }
+    <div class="print-grid">
+      <div>
+        <div class="print-section">
+          <div class="print-section-title">基本情報</div>
+          ${card.uketsuke?`<div class="print-row"><span class="print-label">受付担当者</span><span class="print-value">${esc(card.uketsuke)}</span></div>`:''}
+          ${card.tanto?`<div class="print-row"><span class="print-label">担当者</span><span class="print-value">${esc(card.tanto)}</span></div>`:''}
+          <div class="print-row"><span class="print-label">お客様名</span><span class="print-value">${esc(card.name||'')}</span></div>
+          ${card.tel?`<div class="print-row"><span class="print-label">電話番号</span><span class="print-value">${esc(card.tel)}</span></div>`:''}
+          ${card.car?`<div class="print-row"><span class="print-label">車種</span><span class="print-value">${esc(card.car)}</span></div>`:''}
+          ${card.type?`<div class="print-row"><span class="print-label">種別</span><span class="print-value">${esc(card.type)}</span></div>`:''}
+          ${card.work?`<div class="print-row"><span class="print-label">作業内容</span><span class="print-value">${esc(card.work)}</span></div>`:''}
+          ${card.date?`<div class="print-row"><span class="print-label">受付日時</span><span class="print-value">${esc(card.date)}</span></div>`:''}
+        </div>
+      </div>
+      <div>
+        <div class="print-section">
+          <div class="print-section-title">予約・支払情報</div>
+          ${card.resDate?`<div class="print-row"><span class="print-label">予約日時</span><span class="print-value">${esc(card.resDate)} ${esc(card.resTime||'')} / ${durLabel(card.duration)}</span></div>`:''}
+          ${card.pay?`<div class="print-row"><span class="print-label">支払方法</span><span class="print-value">${esc(card.pay)}</span></div>`:''}
+          ${card.coupon&&card.coupon!=='なし'?`<div class="print-row"><span class="print-label">クーポン</span><span class="print-value">${esc(card.coupon)}</span></div>`:''}
+          ${card.receipt?`<div class="print-row"><span class="print-label">領収書</span><span class="print-value">${esc(card.receipt)}</span></div>`:''}
+          ${card.worker?`<div class="print-row"><span class="print-label">作業者</span><span class="print-value">${esc(card.worker)}</span></div>`:''}
+          ${card.confirm?`<div class="print-row"><span class="print-label">最終確認者</span><span class="print-value">${esc(card.confirm)}</span></div>`:''}
+          ${tiresStr?`<div class="print-row"><span class="print-label">交換場所</span><span class="print-value">${tiresStr}</span></div>`:''}
+          ${card.memo?`<div class="print-row"><span class="print-label">備考</span><span class="print-value">${esc(card.memo)}</span></div>`:''}
+        </div>
+      </div>
+    </div>
+    ${productRows?`
+    <div class="print-section">
+      <div class="print-section-title">商品情報</div>
+      <table class="print-table">
+        <thead><tr><th>商品</th><th>区分1</th><th>区分2</th><th>S/W</th><th>管理番号</th><th>サイズ</th><th>荷重</th><th>商品名/備考</th><th>数量</th><th>単価</th><th>小計</th></tr></thead>
+        <tbody>${productRows}</tbody>
+      </table>
+      <div class="print-total">
+        ${discRate>0?`<div style="font-size:9pt;color:#E24B4A;font-weight:600">割引適用（${card.coupon}）</div>`:''}
+        <div>小計（税抜）: ¥${(card.total||0).toLocaleString()}</div>
+        <div>消費税（10%）: ¥${(card.tax||0).toLocaleString()}</div>
+        <div style="font-size:13pt;margin-top:2mm">合計（税込）: ¥${(card.grandTotal||0).toLocaleString()}</div>
+      </div>
+    </div>`:''}`;
+
+  document.getElementById('print-area').innerHTML = html;
+  window.print();
 }
 
 // ================================================================
