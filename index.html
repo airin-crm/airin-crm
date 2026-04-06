@@ -202,8 +202,8 @@ button{font-family:inherit;cursor:pointer}
 
   <div class="sl">基本情報</div>
   <div class="g4" style="margin-bottom:6px">
-    <div class="fi"><label>受付担当者</label><select id="f-uketsuke"><option value="">-</option><option>新井</option><option>宗像</option><option>野村</option><option>小屋</option><option>鈴木</option><option>南</option><option>岡部</option><option>秋本</option><option>惣藤</option></select></div>
-    <div class="fi"><label>担当者</label><select id="f-tanto"><option value="">-</option><option>新井</option><option>宗像</option><option>野村</option><option>小屋</option><option>鈴木</option><option>南</option><option>岡部</option><option>秋本</option><option>惣藤</option></select></div>
+    <div class="fi"><label>受付担当者</label><select id="f-uketsuke"><option value="">-</option><option>新井</option><option>宗像</option><option>小屋</option><option>恩藤</option><option>南</option><option>岡部</option><option>鈴木</option><option>野村</option><option>秋本</option><option>その他</option></select></div>
+    <div class="fi"><label>担当者</label><select id="f-tanto"><option value="">-</option><option>新井</option><option>宗像</option><option>小屋</option><option>恩藤</option><option>南</option><option>岡部</option><option>鈴木</option><option>野村</option><option>秋本</option><option>その他</option></select></div>
     <div class="fi"><label>お客様名</label><input id="f-name" placeholder="田中 太郎"/></div>
     <div class="fi"><label>電話番号</label><input id="f-tel" type="tel" placeholder="090-0000-0000"/></div>
     <div class="fi"><label>受付日時</label><input type="datetime-local" id="f-date"/></div>
@@ -270,8 +270,23 @@ button{font-family:inherit;cursor:pointer}
       </tr></thead>
       <tbody id="pt-body"></tbody>
       <tfoot>
-        <tr><td colspan="12" style="text-align:right;font-size:10px;color:#888;padding:3px 2px">小 計（税抜）</td><td style="text-align:right;font-size:10px;font-weight:600;white-space:nowrap;padding:3px 2px" id="sub-disp">¥0</td></tr>
-        <tr><td colspan="12" style="text-align:right;font-size:10px;color:#888;padding:3px 2px">消費税（10%）</td><td style="text-align:right;font-size:10px;font-weight:600;white-space:nowrap;padding:3px 2px" id="tax-disp">¥0</td></tr>
+        <tr><td colspan="12" style="text-align:right;font-size:10px;color:#888;padding:3px 2px"><span id="sub-label">小 計（税抜）</span></td><td style="text-align:right;font-size:10px;font-weight:600;white-space:nowrap;padding:3px 2px" id="sub-disp">¥0</td></tr>
+        <tr>
+          <td colspan="11" style="text-align:right;font-size:10px;color:#888;padding:3px 2px">
+            <label style="display:inline-flex;align-items:center;gap:10px;cursor:pointer">
+              <span style="display:inline-flex;align-items:center;gap:4px">
+                <input type="radio" name="tax-mode" id="tax-exclusive" value="exclusive" checked onchange="calcTotal()" style="width:13px;height:13px;accent-color:#185FA5;-webkit-appearance:auto;appearance:auto">
+                <span>税抜</span>
+              </span>
+              <span style="display:inline-flex;align-items:center;gap:4px">
+                <input type="radio" name="tax-mode" id="tax-inclusive" value="inclusive" onchange="calcTotal()" style="width:13px;height:13px;accent-color:#185FA5;-webkit-appearance:auto;appearance:auto">
+                <span>税込</span>
+              </span>
+            </label>
+            <span style="margin-left:10px" id="tax-label">消費税（10%）</span>
+          </td>
+          <td style="text-align:right;font-size:10px;font-weight:600;white-space:nowrap;padding:3px 2px" id="tax-disp">¥0</td>
+        </tr>
         <tr style="border-top:0.5px solid #eee"><td colspan="12" style="text-align:right;font-weight:700;font-size:11px;padding:5px 2px">合 計（税込）</td><td style="text-align:right;font-weight:700;font-size:12px;padding:5px 2px;white-space:nowrap" id="total-disp">¥0</td></tr>
       </tfoot>
     </table>
@@ -308,11 +323,11 @@ button{font-family:inherit;cursor:pointer}
     <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
       <div class="fi" style="min-width:130px">
         <label style="font-size:10px;color:#888;display:block;margin-bottom:2px">作業者</label>
-        <select id="f-worker" style="width:130px"><option value="">-</option><option>新井</option><option>宗像</option><option>野村</option><option>小屋</option><option>鈴木</option><option>南</option><option>岡部</option><option>秋本</option><option>惣藤</option></select>
+        <select id="f-worker" style="width:130px"><option value="">-</option><option>新井</option><option>宗像</option><option>小屋</option><option>恩藤</option><option>南</option><option>岡部</option><option>鈴木</option><option>野村</option><option>秋本</option><option>その他</option></select>
       </div>
       <div class="fi" style="min-width:130px">
         <label style="font-size:10px;color:#888;display:block;margin-bottom:2px">最終確認者</label>
-        <select id="f-confirm" style="width:130px"><option value="">-</option><option>新井</option><option>宗像</option><option>野村</option><option>小屋</option><option>鈴木</option><option>南</option><option>岡部</option><option>秋本</option><option>惣藤</option></select>
+        <select id="f-confirm" style="width:130px"><option value="">-</option><option>新井</option><option>宗像</option><option>小屋</option><option>恩藤</option><option>南</option><option>岡部</option><option>鈴木</option><option>野村</option><option>秋本</option><option>その他</option></select>
       </div>
     </div>
     <div class="mright">
@@ -716,7 +731,7 @@ function openNew(colId){
   document.getElementById('mttl').textContent='新規お客様カード';
   document.getElementById('del-btn').style.display='none';
   ['uketsuke','tanto','name','tel','car','type','work','resdate','restime','worker','confirm'].forEach(f=>sv('f-'+f,''));
-  sv('f-coupon','なし'); sv('f-pay',''); sv('f-receipt','発行なし');
+  sv('f-coupon','なし'); sv('f-pay',''); sv('f-receipt','発行なし'); const excDef=document.getElementById('tax-exclusive'); if(excDef)excDef.checked=true;
   sv('f-dur','1'); sv('f-memo',''); sv('f-date',nowJST());
   buildRows(); resetChk();
   document.getElementById('avail-msg').className='avail';
@@ -785,14 +800,14 @@ function buildRows(){
     const tr=document.createElement('tr');
     tr.innerHTML=`
       <td><select class="pi"><option value="">-</option><option>PC</option><option>LT</option><option>TB</option><option>工賃</option><option>廃タイヤ処分代</option><option>タイヤ袋</option><option>ウエイト</option><option>チューブ</option><option>キャップ</option><option>ナット</option><option>会員バルブ</option></select></td>
-      <td><select class="pk"><option value="">-</option><option>タイヤ</option><option>アルミ</option><option>鉄</option><option>タイヤアルミセット</option><option>タイヤ鉄セット</option></select></td>
+      <td><select class="pk" onchange="autoFillMemo(this)"><option value="">-</option><option>タイヤ</option><option>アルミ</option><option>鉄</option><option>タイヤアルミセット</option><option>タイヤ鉄セット</option></select></td>
       <td><select class="pn"><option value="">-</option><option>新品</option><option>ｺﾛｶﾞｼ</option><option>中古</option><option>90%</option><option>80%</option><option>70%</option><option>60%</option><option>50%以下</option></select></td>
       <td><select class="ps"><option value="">-</option><option>夏</option><option>冬</option><option>夏冬</option></select></td>
       <td><input type="text" class="pcode" maxlength="10" style="width:100%;font-size:10px"></td>
-      <td><input type="number" class="pw" style="width:100%;font-size:11px;padding:3px"></td>
-      <td><input type="number" class="ph" style="width:100%;font-size:11px;padding:3px"></td>
-      <td><input type="number" class="pinch" style="width:100%;font-size:11px;padding:3px"></td>
-      <td><input type="text" class="pl" maxlength="8" style="width:100%;font-size:10px"></td>
+      <td><input type="number" class="pw" style="width:100%;font-size:11px;padding:3px" oninput="autoFillMemo(this)"></td>
+      <td><input type="number" class="ph" style="width:100%;font-size:11px;padding:3px" oninput="autoFillMemo(this)"></td>
+      <td><input type="number" class="pinch" style="width:100%;font-size:11px;padding:3px" oninput="autoFillMemo(this)"></td>
+      <td><input type="text" class="pl" maxlength="8" style="width:100%;font-size:10px" oninput="autoFillMemo(this)"></td>
       <td><input type="text" class="pmemo" style="width:100%;font-size:10px"></td>
       <td><input type="number" class="pq" style="width:100%;font-size:11px;padding:3px" oninput="calcTotal()"></td>
       <td><input type="number" class="pp" style="width:100%;font-size:10px" oninput="calcTotal()"></td>
@@ -802,6 +817,40 @@ function buildRows(){
 }
 
 const DISCOUNT_KBN = ['タイヤ'];
+
+// ================================================================
+// 商品名/備考 自動入力
+// ================================================================
+function autoFillMemo(el){
+  const tr = el.closest('tr');
+  if(!tr) return;
+  const kbn  = tr.querySelector('.pk')?.value || '';
+  const w    = tr.querySelector('.pw')?.value  || '';
+  const h    = tr.querySelector('.ph')?.value  || '';
+  const inch = tr.querySelector('.pinch')?.value || '';
+  const load = tr.querySelector('.pl')?.value  || '';
+  const memoEl = tr.querySelector('.pmemo');
+  if(!memoEl) return;
+
+  let autoStr = '';
+
+  if(kbn === 'タイヤ'){
+    // 例: 165/70R14 6PR
+    let s = w;
+    if(h)    s += '/'+h;
+    if(inch) s += 'R'+inch;
+    if(load) s += ' '+load;
+    autoStr = s;
+  } else if(kbn === 'アルミ' || kbn === '鉄'){
+    // 例: 14インチ
+    if(inch) autoStr = inch+'インチ';
+  }
+  // タイヤアルミセット・タイヤ鉄セットは自動入力なし
+
+  if(autoStr){
+    memoEl.value = autoStr;
+  }
+}
 function calcTotal(){
   const coupon = gv('f-coupon');
   const discRate = coupon==='当店10%OFFクーポン'?0.1 : coupon==='あゆこ割'?0.05 : 0;
@@ -834,7 +883,28 @@ function calcTotal(){
   });
   const discAmt=Math.round(discTotal*discRate);
   const discedSub=Math.round(sub)-discAmt;
-  const tax=Math.round(discedSub*0.1);
+
+  // 税込/税抜モード
+  const isInclusive = document.getElementById('tax-inclusive')?.checked || false;
+  let tax, finalTotal;
+  if(isInclusive){
+    // 税込モード：消費税計算なし
+    tax = 0;
+    finalTotal = discedSub;
+    const subLabel = document.getElementById('sub-label');
+    const taxLabel = document.getElementById('tax-label');
+    if(subLabel) subLabel.textContent = '小 計（税込）';
+    if(taxLabel) taxLabel.textContent = '消費税（税込のため0）';
+  } else {
+    // 税抜モード：消費税10%計算
+    tax = Math.round(discedSub*0.1);
+    finalTotal = discedSub + tax;
+    const subLabel = document.getElementById('sub-label');
+    const taxLabel = document.getElementById('tax-label');
+    if(subLabel) subLabel.textContent = '小 計（税抜）';
+    if(taxLabel) taxLabel.textContent = '消費税（10%）';
+  }
+
   // 割引行を表示/非表示
   let discRow=document.getElementById('disc-row');
   if(!discRow){
@@ -852,8 +922,8 @@ function calcTotal(){
     discRow.style.display='none';
   }
   document.getElementById('sub-disp').textContent='¥'+discedSub.toLocaleString();
-  document.getElementById('tax-disp').textContent='¥'+tax.toLocaleString();
-  document.getElementById('total-disp').textContent='¥'+(discedSub+tax).toLocaleString();
+  document.getElementById('tax-disp').textContent=isInclusive?'-':'¥'+tax.toLocaleString();
+  document.getElementById('total-disp').textContent='¥'+finalTotal.toLocaleString();
 }
 
 // ================================================================
@@ -885,13 +955,15 @@ function collectCard(){
   const discRate=coupon==='当店10%OFFクーポン'?0.1:coupon==='あゆこ割'?0.05:0;
   const discAmt=discRate>0?Math.round(products.filter(p=>DISCOUNT_KBN.includes(p.kbn)).reduce((s,p)=>s+p.sub,0)*discRate):0;
   const sub=rawSub-discAmt;
-  const tax=Math.round(sub*0.1);
+  const isInclusive=document.getElementById('tax-inclusive')?.checked||false;
+  const tax=isInclusive?0:Math.round(sub*0.1);
+  const taxMode=isInclusive?'inclusive':'exclusive';
   return {
     id:editCardId||uid(),
     name:gv('f-name'), uketsuke:gv('f-uketsuke'), tanto:gv('f-tanto'), tel:gv('f-tel'), date:gv('f-date'),
     car:gv('f-car'), type:gv('f-type'), work:gv('f-work'),
     resDate:gv('f-resdate'), resTime:gv('f-restime'), duration:gv('f-dur'),
-    pay:gv('f-pay'), coupon:gv('f-coupon'), receipt:gv('f-receipt'),
+    pay:gv('f-pay'), coupon:gv('f-coupon'), receipt:gv('f-receipt'), taxMode:taxMode||'exclusive',
     memo:gv('f-memo'), worker:gv('f-worker'), confirm:gv('f-confirm'),
     products, tires, status, total:sub, tax, grandTotal:sub+tax
   };
