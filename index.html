@@ -1068,22 +1068,27 @@ function saveAndReserve(){
     sendData.deleteResTime = prevResTime;
     sendData.deleteDuration = prevDuration;
     // どちらの枠に入っていたか（保存済みのslot情報を使う）
-    sendData.deleteSlot = existingCard?.reservedSlot || 1;
+    // reservedSlotが保存されていない古いカードの場合はシートを直接確認して判断
+    const savedSlot = existingCard?.reservedSlot;
+    sendData.deleteSlot = savedSlot || null; // nullの場合はGAS側で両方チェック
   }
   jsonpCall(GS_URL+'?action=reserve&callback={CB}&data='+encodeURIComponent(JSON.stringify(sendData)),30000)
     .then(r=>{
       if(r.ok){
         showToast('✓ '+r.message,'ok');
         // 予約枠番号（slot）をカードに保存しておく（次回変更時の削除に使う）
+        // 全カラムから対象カードを探して保存
         if(r.slot){
-          const col=COLS.find(c=>c.id==='c3');
-          if(col){
-            const cardInCol=col.cards.find(c=>c.id===card.id);
+          let saved = false;
+          for(const col of COLS){
+            const cardInCol = col.cards.find(c=>c.id===card.id);
             if(cardInCol){
-              cardInCol.reservedSlot=r.slot;
-              saveToFirebase();
+              cardInCol.reservedSlot = r.slot;
+              saved = true;
+              break;
             }
           }
+          if(saved) saveToFirebase();
         }
       } else {
         showToast('予約エラー: '+r.error,'error');
