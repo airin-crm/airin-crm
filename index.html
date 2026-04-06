@@ -435,8 +435,37 @@ function saveAlertMin(){
     .catch(e=>showToast('設定エラー: '+e.message,'error'));
 }
 
+// カード1枚だけ更新（他の人の操作を上書きしない）
+function saveCard_FB(card, colId){
+  db.ref('board/cols/'+colId+'/cards/'+card.id).set(card)
+    .catch(e=>showToast('保存エラー: '+e.message,'error'));
+}
+// カード1枚だけ削除
+function deleteCard_FB(cardId, colId){
+  db.ref('board/cols/'+colId+'/cards/'+cardId).remove()
+    .catch(e=>showToast('削除エラー: '+e.message,'error'));
+}
+// カラムのタイトルだけ更新
+function saveColTitle_FB(colId, title){
+  db.ref('board/cols/'+colId+'/title').set(title)
+    .catch(e=>showToast('保存エラー: '+e.message,'error'));
+}
+// カラム全体を更新（カード移動時）
+function saveCol_FB(col){
+  const cards={};
+  col.cards.forEach(c=>{ cards[c.id]=c; });
+  db.ref('board/cols/'+col.id).set({title:col.title, cards})
+    .catch(e=>showToast('保存エラー: '+e.message,'error'));
+}
+// カラム順序だけ更新
+function saveColOrder_FB(){
+  const order = COLS.map(c=>c.id);
+  db.ref('board/colOrder').set(order)
+    .catch(e=>showToast('保存エラー: '+e.message,'error'));
+}
+// 後方互換用（全体保存が必要な場合のみ使用）
 function saveToFirebase(){
-  const data={cols:{}};
+  const data={cols:{}, colOrder: COLS.map(c=>c.id)};
   COLS.forEach(col=>{
     const cards={};
     col.cards.forEach(c=>{ cards[c.id]=c; });
@@ -449,6 +478,19 @@ db.ref('board').on('value', snap=>{
   if(isModalOpen || isSyncing) return;
   const data = snap.val();
   if(!data||!data.cols) return;
+
+  // カラム順序をFirebaseから復元
+  if(data.colOrder && Array.isArray(data.colOrder)){
+    const ordered = [];
+    data.colOrder.forEach(id=>{
+      const col = COLS.find(c=>c.id===id);
+      if(col) ordered.push(col);
+    });
+    // 順序に含まれていないカラムを末尾に追加
+    COLS.forEach(col=>{ if(!ordered.find(c=>c.id===col.id)) ordered.push(col); });
+    COLS.length=0; ordered.forEach(c=>COLS.push(c));
+  }
+
   COLS.forEach(col=>{
     if(data.cols[col.id]){
       col.title = data.cols[col.id].title || col.title;
@@ -534,7 +576,7 @@ function endColEdit(colId){
   if(nm){ nm.textContent=col.title; nm.style.display=''; }
   if(inp) inp.style.display='none';
   editingColId=null;
-  saveToFirebase();
+  saveColTitle_FB(colId, col.title);
 }
 
 // ================================================================
@@ -575,7 +617,8 @@ function renderBoard(){
       const newOrder=items.map(el=>el.dataset.colId);
       COLS.sort((a,b)=>newOrder.indexOf(a.id)-newOrder.indexOf(b.id));
       isSyncing=true;
-      saveToFirebase();
+      // カラム順序だけ更新
+      saveColOrder_FB();
       setTimeout(()=>{ isSyncing=false; renderBoard(); },800);
     }
   });
@@ -601,13 +644,16 @@ function renderBoard(){
         const toCol=COLS.find(c=>c.id===toColId);
         if(!fromCol||!toCol) return;
         const idx=fromCol.cards.findIndex(c=>c.id===cardId);
-        if(idx!==-1){
-          const[card]=fromCol.cards.splice(idx,1);
-          toCol.cards.push(card);
-          toCol.cards=sortCards(toCol.cards);
-        }
+        if(idx===-1) return;
+        const[card]=fromCol.cards.splice(idx,1);
+        toCol.cards.push(card);
+        toCol.cards=sortCards(toCol.cards);
         isSyncing=true;
-        saveToFirebase();
+        // 移動元と移動先のカラムだけ更新（同じカラム内移動は移動先だけ）
+        if(fromColId !== toColId){
+          saveCol_FB(fromCol);
+        }
+        saveCol_FB(toCol);
         setTimeout(()=>{ isSyncing=false; renderBoard(); if(searchQuery)doSearch(); },800);
       }
     });
@@ -660,17 +706,18 @@ function buildTrashEl(){
     onAdd(evt){
       const cardId=evt.item.dataset.cardId;
       const colId=evt.item.dataset.colId;
+      const cardName=evt.item.querySelector('.card-name')?.textContent||'';
       // アイテムを即座にDOMから除去
       evt.item.remove();
-      if(!confirm('「'+evt.item.querySelector('.card-name')?.textContent+'」を削除しますか？')){
-        // キャンセルした場合は元に戻す（再描画）
+      if(!confirm('「'+cardName+'」を削除しますか？')){
         renderBoard();
         return;
       }
       isSyncing=true;
       const col=COLS.find(c=>c.id===colId);
       if(col) col.cards=col.cards.filter(c=>c.id!==cardId);
-      saveToFirebase();
+      // カード1枚だけ削除
+      deleteCard_FB(cardId, colId);
       setTimeout(()=>{ isSyncing=false; renderBoard(); },500);
       showToast('削除しました','ok');
     }
@@ -973,16 +1020,18 @@ function saveCard(){
   const card=collectCard();
   if(!card.name){ showToast('お客様名を入力してください','error'); return; }
   isSyncing=true;
+  let targetColId;
   if(editCardId){
-    // 既存カード編集 → 元のカラムに残す
     const col=COLS.find(c=>c.id===editColId);
     if(col){ const idx=col.cards.findIndex(c=>c.id===editCardId); if(idx!==-1) col.cards[idx]=card; }
+    targetColId = editColId;
   } else {
-    // 新規カード → 常に問合せ未対応（c1）へ
     const col=COLS.find(c=>c.id==='c1')||COLS[0];
     col.cards.push(card);
+    targetColId = col.id;
   }
-  saveToFirebase();
+  // カード1枚だけ更新（他の操作を上書きしない）
+  saveCard_FB(card, targetColId);
   closeModal();
   setTimeout(()=>{ isSyncing=false; renderBoard(); showToast('保存しました','ok'); },300);
 }
@@ -992,7 +1041,8 @@ function confirmDelete(){
   isSyncing=true;
   const col=COLS.find(c=>c.id===editColId);
   if(col) col.cards=col.cards.filter(c=>c.id!==editCardId);
-  saveToFirebase();
+  // カード1枚だけ削除
+  deleteCard_FB(editCardId, editColId);
   closeModal();
   setTimeout(()=>{ isSyncing=false; renderBoard(); showToast('削除しました','ok'); },300);
 }
@@ -1051,13 +1101,20 @@ function saveAndReserve(){
 
   // 予約を入れる → 常に予約済み（c3）へ移動
   if(editCardId){
-    COLS.forEach(c=>{ c.cards=c.cards.filter(x=>x.id!==editCardId); });
+    // 元のカラムからカードを削除
+    const oldCol = COLS.find(c=>c.id===editColId);
+    if(oldCol){
+      oldCol.cards = oldCol.cards.filter(x=>x.id!==editCardId);
+      if(editColId !== 'c3') deleteCard_FB(editCardId, editColId);
+    }
   }
   const resCol=COLS.find(c=>c.id==='c3')||COLS[0];
+  resCol.cards = resCol.cards.filter(x=>x.id!==card.id); // 重複防止
   resCol.cards.push(card);
   resCol.cards=sortCards(resCol.cards);
   editCardId=card.id; editColId='c3';
-  saveToFirebase();
+  // c3のカード1枚だけ更新
+  saveCard_FB(card, 'c3');
   closeModal();
   setTimeout(()=>{ isSyncing=false; renderBoard(); showToast('予約済みに移動しました','ok'); },300);
 
@@ -1079,16 +1136,16 @@ function saveAndReserve(){
         // 予約枠番号（slot）をカードに保存しておく（次回変更時の削除に使う）
         // 全カラムから対象カードを探して保存
         if(r.slot){
-          let saved = false;
+          // 全カラムから対象カードを探してslot情報を更新
           for(const col of COLS){
             const cardInCol = col.cards.find(c=>c.id===card.id);
             if(cardInCol){
               cardInCol.reservedSlot = r.slot;
-              saved = true;
+              // カード1枚だけFirebaseに保存
+              saveCard_FB(cardInCol, col.id);
               break;
             }
           }
-          if(saved) saveToFirebase();
         }
       } else {
         showToast('予約エラー: '+r.error,'error');
@@ -1103,10 +1160,17 @@ function markSales(){
   if(!card.name){ showToast('お客様名を入力してください','error'); return; }
   if((card.grandTotal||0)<=0){ showToast('商品情報・金額を入力してください','error'); return; }
   isSyncing=true;
-  COLS.forEach(c=>{ c.cards=c.cards.filter(x=>x.id!==card.id); });
+  // 元のカラムから削除
+  const fromCol=COLS.find(c=>c.id===editColId);
+  if(fromCol){
+    fromCol.cards=fromCol.cards.filter(x=>x.id!==card.id);
+    if(editColId !== 'c7') deleteCard_FB(card.id, editColId);
+  }
+  // c7（完了）へ追加
   const done=COLS.find(c=>c.id==='c7')||COLS[COLS.length-2];
+  done.cards=done.cards.filter(x=>x.id!==card.id); // 重複防止
   done.cards.push(card);
-  saveToFirebase();
+  saveCard_FB(card,'c7');
   closeModal();
   setTimeout(()=>{ isSyncing=false; renderBoard(); },300);
   showToast('売上シートに送信中...','info');
