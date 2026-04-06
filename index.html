@@ -1012,15 +1012,47 @@ function saveAndReserve(){
   const card=collectCard();
   if(!card.name){ showToast('お客様名を入力してください','error'); return; }
   if(!card.resDate||!card.resTime){ showToast('予約日時を入力してください','error'); return; }
+
+  // 既存カードに前回の予約日時があるか確認
+  const existingCard = editCardId
+    ? COLS.flatMap(c=>c.cards).find(c=>c.id===editCardId)
+    : null;
+  const prevResDate = existingCard?.prevResDate || existingCard?.resDate || null;
+  const prevResTime = existingCard?.prevResTime || existingCard?.resTime || null;
+  const prevDuration = existingCard?.duration || null;
+  const isChange = prevResDate && prevResTime &&
+    (prevResDate !== card.resDate || prevResTime !== card.resTime);
+
+  // 確認メッセージ
+  let confirmMsg = '';
+  if(isChange){
+    confirmMsg = `予約を変更しますか？
+
+【変更前】${prevResDate} ${prevResTime}（${durLabel(prevDuration)}）
+【変更後】${card.resDate} ${card.resTime}（${durLabel(card.duration)}）
+
+元の予約は自動的に削除されます。`;
+  } else {
+    confirmMsg = `予約を入れますか？
+
+【予約日時】${card.resDate} ${card.resTime}（${durLabel(card.duration)}）
+【お客様】${card.name}`;
+  }
+
+  if(!confirm(confirmMsg)) return;
+
   const btn=document.getElementById('res-btn');
   btn.disabled=true; btn.textContent='送信中...';
   isSyncing=true;
+
+  // 前回の予約情報をカードに保存
+  card.prevResDate = card.resDate;
+  card.prevResTime = card.resTime;
+
   // 予約を入れる → 常に予約済み（c3）へ移動
   if(editCardId){
-    // 元のカラムから削除
     COLS.forEach(c=>{ c.cards=c.cards.filter(x=>x.id!==editCardId); });
   }
-  // c3（予約済み）へ追加
   const resCol=COLS.find(c=>c.id==='c3')||COLS[0];
   resCol.cards.push(card);
   resCol.cards=sortCards(resCol.cards);
@@ -1028,8 +1060,15 @@ function saveAndReserve(){
   saveToFirebase();
   closeModal();
   setTimeout(()=>{ isSyncing=false; renderBoard(); showToast('予約済みに移動しました','ok'); },300);
-  // GAS送信
-  jsonpCall(GS_URL+'?action=reserve&callback={CB}&data='+encodeURIComponent(JSON.stringify(card)),30000)
+
+  // GAS送信（変更の場合は元の予約削除情報も送る）
+  const sendData = {...card};
+  if(isChange){
+    sendData.deleteResDate = prevResDate;
+    sendData.deleteResTime = prevResTime;
+    sendData.deleteDuration = prevDuration;
+  }
+  jsonpCall(GS_URL+'?action=reserve&callback={CB}&data='+encodeURIComponent(JSON.stringify(sendData)),30000)
     .then(r=>{ if(r.ok) showToast('✓ '+r.message,'ok'); else showToast('予約エラー: '+r.error,'error'); })
     .catch(e=>showToast('通信エラー: '+e,'error'))
     .finally(()=>{ btn.disabled=false; btn.textContent='予約を入れる'; });
