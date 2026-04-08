@@ -368,6 +368,7 @@ button{font-family:inherit;cursor:pointer}
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <script>
 'use strict';
@@ -397,7 +398,7 @@ let editingColId = null;
 let isModalOpen = false;
 let isSyncing = false;
 let searchQuery = '';
-let sortableInstances = []; // Sortableインスタンスを管理
+let sortableInstances = [];
 
 // ================================================================
 // Firebase
@@ -413,20 +414,51 @@ firebase.initializeApp({
 });
 const db = firebase.database();
 
-db.ref('.info/connected').on('value', snap => {
-  const el = document.getElementById('sync-st');
-  if(snap.val()){ el.textContent='● 同期中'; el.className='sync-status on'; }
-  else { el.textContent='○ 切断中'; el.className='sync-status off'; }
-});
+function initFirebaseListeners() {
+  db.ref('.info/connected').on('value', snap => {
+    const el = document.getElementById('sync-st');
+    if(snap.val()){ el.textContent='● 同期中'; el.className='sync-status on'; }
+    else { el.textContent='○ 切断中'; el.className='sync-status off'; }
+  });
 
-// 警告時間をFirebaseから読み込み（全員で共有）
-db.ref('settings/alertMin').on('value', snap => {
-  const val = snap.val();
-  if(val && !isNaN(val)){
-    const inp = document.getElementById('alert-min');
-    if(inp) inp.value = val;
-  }
-});
+  // 警告時間をFirebaseから読み込み（全員で共有）
+  db.ref('settings/alertMin').on('value', snap => {
+    const val = snap.val();
+    if(val && !isNaN(val)){
+      const inp = document.getElementById('alert-min');
+      if(inp) inp.value = val;
+    }
+  });
+
+  db.ref('board').on('value', snap=>{
+    if(isModalOpen || isSyncing) return;
+    const data = snap.val();
+    if(!data||!data.cols) return;
+
+    // カラム順序をFirebaseから復元
+    if(data.colOrder && Array.isArray(data.colOrder)){
+      const ordered = [];
+      data.colOrder.forEach(id=>{
+        const col = COLS.find(c=>c.id===id);
+        if(col) ordered.push(col);
+      });
+      // 順序に含まれていないカラムを末尾に追加
+      COLS.forEach(col=>{ if(!ordered.find(c=>c.id===col.id)) ordered.push(col); });
+      COLS.length=0; ordered.forEach(c=>COLS.push(c));
+    }
+
+    COLS.forEach(col=>{
+      if(data.cols[col.id]){
+        col.title = data.cols[col.id].title || col.title;
+        const c = data.cols[col.id].cards;
+        col.cards = c ? Object.values(c).filter(x=>x&&x.id) : [];
+      } else {
+        col.cards = [];
+      }
+    });
+    renderBoard();
+  });
+}
 
 function saveAlertMin(){
   const val = parseInt(document.getElementById('alert-min')?.value)||30;
@@ -473,35 +505,6 @@ function saveToFirebase(){
   });
   db.ref('board').set(data).catch(e=>showToast('保存エラー: '+e.message,'error'));
 }
-
-db.ref('board').on('value', snap=>{
-  if(isModalOpen || isSyncing) return;
-  const data = snap.val();
-  if(!data||!data.cols) return;
-
-  // カラム順序をFirebaseから復元
-  if(data.colOrder && Array.isArray(data.colOrder)){
-    const ordered = [];
-    data.colOrder.forEach(id=>{
-      const col = COLS.find(c=>c.id===id);
-      if(col) ordered.push(col);
-    });
-    // 順序に含まれていないカラムを末尾に追加
-    COLS.forEach(col=>{ if(!ordered.find(c=>c.id===col.id)) ordered.push(col); });
-    COLS.length=0; ordered.forEach(c=>COLS.push(c));
-  }
-
-  COLS.forEach(col=>{
-    if(data.cols[col.id]){
-      col.title = data.cols[col.id].title || col.title;
-      const c = data.cols[col.id].cards;
-      col.cards = c ? Object.values(c).filter(x=>x&&x.id) : [];
-    } else {
-      col.cards = [];
-    }
-  });
-  renderBoard();
-});
 
 // ================================================================
 // ユーティリティ
@@ -583,14 +586,12 @@ function endColEdit(colId){
 // レンダリング
 // ================================================================
 function renderBoard(){
-  // 既存のSortableを破棄
   sortableInstances.forEach(s=>s.destroy());
   sortableInstances=[];
 
   const board=document.getElementById('board');
   board.innerHTML='';
 
-  // カラムSortable用コンテナ
   const colContainer=document.createElement('div');
   colContainer.id='col-container';
   colContainer.style.cssText='display:flex;gap:10px;align-items:flex-start';
@@ -601,10 +602,8 @@ function renderBoard(){
     colContainer.appendChild(buildColEl(col));
   });
 
-  // ゴミ箱
   colContainer.appendChild(buildTrashEl());
 
-  // カラム並び替えSortable
   const colSort=Sortable.create(colContainer,{
     animation:150,
     handle:'.col-header',
@@ -617,19 +616,17 @@ function renderBoard(){
       const newOrder=items.map(el=>el.dataset.colId);
       COLS.sort((a,b)=>newOrder.indexOf(a.id)-newOrder.indexOf(b.id));
       isSyncing=true;
-      // カラム順序だけ更新
       saveColOrder_FB();
       setTimeout(()=>{ isSyncing=false; renderBoard(); },800);
     }
   });
   sortableInstances.push(colSort);
 
-  // 各カラムのカードSortable
   COLS.forEach(col=>{
     const list=document.getElementById('list-'+col.id);
     if(!list) return;
     const cardSort=Sortable.create(list,{
-      group:'cards', // 同じgroupなら別カラムへ移動可能
+      group:'cards',
       animation:150,
       ghostClass:'sortable-ghost',
       chosenClass:'sortable-chosen',
@@ -649,7 +646,6 @@ function renderBoard(){
         toCol.cards.push(card);
         toCol.cards=sortCards(toCol.cards);
         isSyncing=true;
-        // 移動元と移動先のカラムだけ更新（同じカラム内移動は移動先だけ）
         if(fromColId !== toColId){
           saveCol_FB(fromCol);
         }
@@ -697,7 +693,6 @@ function buildTrashEl(){
       <span>カードをここへ<br>ドロップで削除</span>
     </div>`;
 
-  // ゴミ箱Sortable（受け取り専用）
   const trashList=el.querySelector('.trash-inner');
   const trashSort=Sortable.create(trashList,{
     group:{name:'cards', put:true, pull:false},
@@ -707,7 +702,6 @@ function buildTrashEl(){
       const cardId=evt.item.dataset.cardId;
       const colId=evt.item.dataset.colId;
       const cardName=evt.item.querySelector('.card-name')?.textContent||'';
-      // アイテムを即座にDOMから除去
       evt.item.remove();
       if(!confirm('「'+cardName+'」を削除しますか？')){
         renderBoard();
@@ -716,7 +710,6 @@ function buildTrashEl(){
       isSyncing=true;
       const col=COLS.find(c=>c.id===colId);
       if(col) col.cards=col.cards.filter(c=>c.id!==cardId);
-      // カード1枚だけ削除
       deleteCard_FB(cardId, colId);
       setTimeout(()=>{ isSyncing=false; renderBoard(); },500);
       showToast('削除しました','ok');
@@ -738,9 +731,7 @@ function buildCardEl(card, colId){
     ?(card.resDate.slice(5)+' '+(card.resTime||'--:--')+' / '+durLabel(card.duration))
     :'予約日未設定 / '+durLabel(card.duration);
 
-  // 担当者表示（受付担当者と担当者を同じ行に）
   const staffStr = [card.uketsuke, card.tanto].filter(Boolean).join(' / ');
-  // 大至急連絡チェック（index4）
   const isUrgent = (card.status||[]).includes(4);
   el.innerHTML=`
     ${isUrgent?'<div style="background:#E24B4A;color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:6px 6px 0 0;margin:-10px -11px 6px;text-align:center">🔴 大至急連絡！</div>':''}
@@ -751,7 +742,6 @@ function buildCardEl(card, colId){
     ${stTags?`<div class="card-status">${stTags}</div>`:''}
     ${(card.grandTotal||0)>0?`<div class="card-amount"><span class="alabel">税込合計</span><span class="aval">¥${card.grandTotal.toLocaleString()}</span></div>`:''}`;
 
-  // クリックで編集（ドラッグと区別）
   let startX=0, startY=0;
   el.addEventListener('mousedown',e=>{ startX=e.clientX; startY=e.clientY; });
   el.addEventListener('click',e=>{
@@ -759,7 +749,6 @@ function buildCardEl(card, colId){
       openEdit(card.id, colId);
     }
   });
-  // タッチ対応
   el.addEventListener('touchstart',e=>{ startX=e.touches[0].clientX; startY=e.touches[0].clientY; },{passive:true});
   el.addEventListener('touchend',e=>{
     const dx=Math.abs(e.changedTouches[0].clientX-startX);
@@ -882,17 +871,14 @@ function autoFillMemo(el){
   let autoStr = '';
 
   if(kbn === 'タイヤ'){
-    // 例: 165/70R14 6PR
     let s = w;
     if(h)    s += '/'+h;
     if(inch) s += 'R'+inch;
     if(load) s += ' '+load;
     autoStr = s;
   } else if(kbn === 'アルミ' || kbn === '鉄'){
-    // 例: 14インチ
     if(inch) autoStr = inch+'インチ';
   }
-  // タイヤアルミセット・タイヤ鉄セットは自動入力なし
 
   if(autoStr){
     memoEl.value = autoStr;
@@ -911,10 +897,8 @@ function calcTotal(){
     tr.querySelector('.sc').textContent=s>0?'¥'+s.toLocaleString():'-';
     sub+=s;
     if(isDiscTarget) discTotal+=s;
-    // 割引後単価を行に表示
     let discPriceEl = tr.querySelector('.disc-price');
     if(!discPriceEl){
-      // 単価セルの下に赤字で追加
       const ppCell = tr.querySelector('.pp').parentNode;
       discPriceEl = document.createElement('div');
       discPriceEl.className = 'disc-price';
@@ -931,11 +915,9 @@ function calcTotal(){
   const discAmt=Math.round(discTotal*discRate);
   const discedSub=Math.round(sub)-discAmt;
 
-  // 税込/税抜モード
   const isInclusive = document.getElementById('tax-inclusive')?.checked || false;
   let tax, finalTotal;
   if(isInclusive){
-    // 税込モード：消費税計算なし
     tax = 0;
     finalTotal = discedSub;
     const subLabel = document.getElementById('sub-label');
@@ -943,7 +925,6 @@ function calcTotal(){
     if(subLabel) subLabel.textContent = '小 計（税込）';
     if(taxLabel) taxLabel.textContent = '消費税（税込のため0）';
   } else {
-    // 税抜モード：消費税10%計算
     tax = Math.round(discedSub*0.1);
     finalTotal = discedSub + tax;
     const subLabel = document.getElementById('sub-label');
@@ -952,7 +933,6 @@ function calcTotal(){
     if(taxLabel) taxLabel.textContent = '消費税（10%）';
   }
 
-  // 割引行を表示/非表示
   let discRow=document.getElementById('disc-row');
   if(!discRow){
     const tfoot=document.querySelector('#pt-body').closest('table').querySelector('tfoot');
@@ -1030,7 +1010,6 @@ function saveCard(){
     col.cards.push(card);
     targetColId = col.id;
   }
-  // カード1枚だけ更新（他の操作を上書きしない）
   saveCard_FB(card, targetColId);
   closeModal();
   setTimeout(()=>{ isSyncing=false; renderBoard(); showToast('保存しました','ok'); },300);
@@ -1041,7 +1020,6 @@ function confirmDelete(){
   isSyncing=true;
   const col=COLS.find(c=>c.id===editColId);
   if(col) col.cards=col.cards.filter(c=>c.id!==editCardId);
-  // カード1枚だけ削除
   deleteCard_FB(editCardId, editColId);
   closeModal();
   setTimeout(()=>{ isSyncing=false; renderBoard(); showToast('削除しました','ok'); },300);
@@ -1063,7 +1041,6 @@ function saveAndReserve(){
   if(!card.name){ showToast('お客様名を入力してください','error'); return; }
   if(!card.resDate||!card.resTime){ showToast('予約日時を入力してください','error'); return; }
 
-  // 既存カードに前回の予約日時があるか確認
   const existingCard = editCardId
     ? COLS.flatMap(c=>c.cards).find(c=>c.id===editCardId)
     : null;
@@ -1073,20 +1050,11 @@ function saveAndReserve(){
   const isChange = prevResDate && prevResTime &&
     (prevResDate !== card.resDate || prevResTime !== card.resTime);
 
-  // 確認メッセージ
   let confirmMsg = '';
   if(isChange){
-    confirmMsg = `予約を変更しますか？
-
-【変更前】${prevResDate} ${prevResTime}（${durLabel(prevDuration)}）
-【変更後】${card.resDate} ${card.resTime}（${durLabel(card.duration)}）
-
-元の予約は自動的に削除されます。`;
+    confirmMsg = `予約を変更しますか？\n\n【変更前】${prevResDate} ${prevResTime}（${durLabel(prevDuration)}）\n【変更後】${card.resDate} ${card.resTime}（${durLabel(card.duration)}）\n\n元の予約は自動的に削除されます。`;
   } else {
-    confirmMsg = `予約を入れますか？
-
-【予約日時】${card.resDate} ${card.resTime}（${durLabel(card.duration)}）
-【お客様】${card.name}`;
+    confirmMsg = `予約を入れますか？\n\n【予約日時】${card.resDate} ${card.resTime}（${durLabel(card.duration)}）\n【お客様】${card.name}`;
   }
 
   if(!confirm(confirmMsg)) return;
@@ -1095,13 +1063,10 @@ function saveAndReserve(){
   btn.disabled=true; btn.textContent='送信中...';
   isSyncing=true;
 
-  // 前回の予約情報をカードに保存
   card.prevResDate = card.resDate;
   card.prevResTime = card.resTime;
 
-  // 予約を入れる → 常に予約済み（c3）へ移動
   if(editCardId){
-    // 元のカラムからカードを削除
     const oldCol = COLS.find(c=>c.id===editColId);
     if(oldCol){
       oldCol.cards = oldCol.cards.filter(x=>x.id!==editCardId);
@@ -1109,39 +1074,31 @@ function saveAndReserve(){
     }
   }
   const resCol=COLS.find(c=>c.id==='c3')||COLS[0];
-  resCol.cards = resCol.cards.filter(x=>x.id!==card.id); // 重複防止
+  resCol.cards = resCol.cards.filter(x=>x.id!==card.id);
   resCol.cards.push(card);
   resCol.cards=sortCards(resCol.cards);
   editCardId=card.id; editColId='c3';
-  // c3のカード1枚だけ更新
   saveCard_FB(card, 'c3');
   closeModal();
   setTimeout(()=>{ isSyncing=false; renderBoard(); showToast('予約済みに移動しました','ok'); },300);
 
-  // GAS送信（変更の場合は元の予約削除情報も送る）
   const sendData = {...card};
   if(isChange){
     sendData.deleteResDate = prevResDate;
     sendData.deleteResTime = prevResTime;
     sendData.deleteDuration = prevDuration;
-    // どちらの枠に入っていたか（保存済みのslot情報を使う）
-    // reservedSlotが保存されていない古いカードの場合はシートを直接確認して判断
     const savedSlot = existingCard?.reservedSlot;
-    sendData.deleteSlot = savedSlot || null; // nullの場合はGAS側で両方チェック
+    sendData.deleteSlot = savedSlot || null;
   }
   jsonpCall(GS_URL+'?action=reserve&callback={CB}&data='+encodeURIComponent(JSON.stringify(sendData)),30000)
     .then(r=>{
       if(r.ok){
         showToast('✓ '+r.message,'ok');
-        // 予約枠番号（slot）をカードに保存しておく（次回変更時の削除に使う）
-        // 全カラムから対象カードを探して保存
         if(r.slot){
-          // 全カラムから対象カードを探してslot情報を更新
           for(const col of COLS){
             const cardInCol = col.cards.find(c=>c.id===card.id);
             if(cardInCol){
               cardInCol.reservedSlot = r.slot;
-              // カード1枚だけFirebaseに保存
               saveCard_FB(cardInCol, col.id);
               break;
             }
@@ -1160,15 +1117,13 @@ function markSales(){
   if(!card.name){ showToast('お客様名を入力してください','error'); return; }
   if((card.grandTotal||0)<=0){ showToast('商品情報・金額を入力してください','error'); return; }
   isSyncing=true;
-  // 元のカラムから削除
   const fromCol=COLS.find(c=>c.id===editColId);
   if(fromCol){
     fromCol.cards=fromCol.cards.filter(x=>x.id!==card.id);
     if(editColId !== 'c7') deleteCard_FB(card.id, editColId);
   }
-  // c7（完了）へ追加
   const done=COLS.find(c=>c.id==='c7')||COLS[COLS.length-2];
-  done.cards=done.cards.filter(x=>x.id!==card.id); // 重複防止
+  done.cards=done.cards.filter(x=>x.id!==card.id);
   done.cards.push(card);
   saveCard_FB(card,'c7');
   closeModal();
@@ -1193,7 +1148,6 @@ function printCard(){
   }).join('');
 
   const tiresStr = (card.tires||[]).map(n=>'①②③④⑤⑥⑦⑧⑨⑩'[n-1]).filter(Boolean).join(' ');
-
   const discRate = card.coupon==='当店10%OFFクーポン'?0.1:card.coupon==='あゆこ割'?0.05:0;
 
   const productRows = (card.products||[]).map(p=>{
@@ -1221,7 +1175,7 @@ function printCard(){
       <div class="print-title">お客様カード — ${esc(card.name||'(未入力)')}</div>
       <div class="print-date">印刷日時: ${dateStr}</div>
     </div>
-    ${statusHtml?`<div class="print-status">${statusHtml}</div>`:'' }
+    ${statusHtml?`<div class="print-status">${statusHtml}</div>`:''}
     <div class="print-grid">
       <div>
         <div class="print-section">
@@ -1300,40 +1254,33 @@ function showToast(msg,type){
 // ================================================================
 // 未対応警告ポップアップ
 // ================================================================
-let alertSnoozedUntil = 0; // スヌーズ終了時刻（ms）
+let alertSnoozedUntil = 0;
 let alertCheckInterval = null;
 
 function startAlertCheck(){
   if(alertCheckInterval) clearInterval(alertCheckInterval);
-  // 1分ごとにチェック
   alertCheckInterval = setInterval(checkOverdueCards, 60000);
-  // 起動直後にも1回チェック（10秒後）
   setTimeout(checkOverdueCards, 10000);
 }
 
 function checkOverdueCards(){
-  // スヌーズ中はスキップ
   if(Date.now() < alertSnoozedUntil) return;
 
   const alertMin = parseInt(document.getElementById('alert-min')?.value)||30;
   const now = Date.now();
-  const threshold = alertMin * 60 * 1000; // ms
+  const threshold = alertMin * 60 * 1000;
 
-  // 問合せ未対応カラム（c1固定）のカードを確認
   const c1 = COLS.find(c=>c.id==='c1');
   if(!c1||c1.cards.length===0) return;
 
   const overdue = c1.cards.filter(card=>{
     if(!card.date) return false;
-    // 受付日時から経過時間を計算
     const receivedAt = new Date(card.date).getTime();
     if(isNaN(receivedAt)) return false;
     return (now - receivedAt) >= threshold;
   });
 
   if(overdue.length===0) return;
-
-  // ポップアップ表示
   showAlertPopup(overdue, alertMin);
 }
 
@@ -1362,7 +1309,6 @@ function showAlertPopup(cards, alertMin){
 
 function closeAlert(){
   document.getElementById('alert-popup').classList.remove('open');
-  // 閉じた後も15分後に再チェック（スヌーズと同じ）
   alertSnoozedUntil = Date.now() + 15*60*1000;
 }
 
@@ -1375,8 +1321,14 @@ function snoozeAlert(){
 // ================================================================
 // 初期化
 // ================================================================
-renderBoard();
-startAlertCheck();
+firebase.auth().onAuthStateChanged(user => {
+  if (user) {
+    initFirebaseListeners();
+    renderBoard();
+    startAlertCheck();
+  }
+});
+firebase.auth().signInAnonymously().catch(e => console.error('認証エラー:', e));
 </script>
 </body>
 </html>
