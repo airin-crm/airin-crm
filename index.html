@@ -520,6 +520,12 @@ function sortKey(c){
   return 'ZZZZZZZZZZ';
 }
 function sortCards(arr){ return [...arr].sort((a,b)=>sortKey(a)<sortKey(b)?-1:sortKey(a)>sortKey(b)?1:0); }
+function sortC1Cards(arr){ return [...arr].sort((a,b)=>{
+  const au=(a.status||[]).includes(4)?0:1, bu=(b.status||[]).includes(4)?0:1;
+  if(au!==bu) return au-bu;
+  const ad=a.date||'9999', bd=b.date||'9999';
+  return ad<bd?-1:ad>bd?1:0;
+}); }
 function durLabel(d){ return {'0.5':'30分','1':'1時間','1.5':'1時間30分','2':'2時間'}[d]||d+'h'; }
 function endTime(t,dur){ const[h,m]=t.split(':').map(Number),e=h*60+m+Math.round(parseFloat(dur)*60); return Math.floor(e/60)+':'+String(e%60).padStart(2,'0'); }
 function gv(id){ return document.getElementById(id)?.value||''; }
@@ -598,7 +604,7 @@ function renderBoard(){
   board.appendChild(colContainer);
 
   COLS.forEach(col=>{
-    col.cards=sortCards(col.cards);
+    col.cards=col.id==='c1'?sortC1Cards(col.cards):sortCards(col.cards);
     colContainer.appendChild(buildColEl(col));
   });
 
@@ -644,7 +650,7 @@ function renderBoard(){
         if(idx===-1) return;
         const[card]=fromCol.cards.splice(idx,1);
         toCol.cards.push(card);
-        toCol.cards=sortCards(toCol.cards);
+        toCol.cards=toCol.id==='c1'?sortC1Cards(toCol.cards):sortCards(toCol.cards);
         isSyncing=true;
         if(fromColId !== toColId){
           saveCol_FB(fromCol);
@@ -962,7 +968,8 @@ function collectCard(){
     const item=tr.querySelector('.pi')?.value;
     const qty=parseFloat(tr.querySelector('.pq')?.value)||0;
     const price=parseFloat(tr.querySelector('.pp')?.value)||0;
-    if(item&&(qty>0||price>0)) products.push({
+    const memo=tr.querySelector('.pmemo')?.value||'';
+    if(item&&(qty>0||price>0||memo)) products.push({
       item, kbn:tr.querySelector('.pk')?.value,
       newUsed:tr.querySelector('.pn')?.value,
       season:tr.querySelector('.ps')?.value,
@@ -971,7 +978,7 @@ function collectCard(){
       h:tr.querySelector('.ph')?.value,
       inch:tr.querySelector('.pinch')?.value,
       load:tr.querySelector('.pl')?.value,
-      memo:tr.querySelector('.pmemo')?.value,
+      memo,
       qty, price, sub:qty*price
     });
   });
