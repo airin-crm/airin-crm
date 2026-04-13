@@ -248,11 +248,12 @@ button{font-family:inherit;cursor:pointer}
 
   <div class="sl">現状</div>
   <div class="chk-group">
-    <label class="chk-item"><input type="checkbox" id="st1"> 折り返し</label>
-    <label class="chk-item"><input type="checkbox" id="st2"> お客様連絡待ち</label>
-    <label class="chk-item"><input type="checkbox" id="st3"> 入荷次第連絡</label>
-    <label class="chk-item"><input type="checkbox" id="st5" style="accent-color:#E24B4A"> <span style="color:#A32D2D;font-weight:700">大至急連絡！</span></label>
-    <label class="chk-item"><input type="checkbox" id="st4"> その他確認事項有</label>
+    <label class="chk-item"><input type="checkbox" id="st1" data-sv="4" style="accent-color:#E24B4A"> <span style="color:#A32D2D;font-weight:700">大至急連絡！</span></label>
+    <label class="chk-item"><input type="checkbox" id="st2" data-sv="5" style="accent-color:#1565C0"> <span style="color:#1565C0;font-weight:700">商品取消未対応</span></label>
+    <label class="chk-item"><input type="checkbox" id="st3" data-sv="0"> 折り返し</label>
+    <label class="chk-item"><input type="checkbox" id="st4" data-sv="1"> お客様連絡待ち</label>
+    <label class="chk-item"><input type="checkbox" id="st5" data-sv="2"> 入荷次第連絡</label>
+    <label class="chk-item"><input type="checkbox" id="st6" data-sv="3"> その他確認事項有り</label>
   </div>
 
   <div class="sl">商品情報</div>
@@ -377,7 +378,7 @@ button{font-family:inherit;cursor:pointer}
 // 設定
 // ================================================================
 const GS_URL = 'https://script.google.com/macros/s/AKfycbwlV4FLTYy_18e4EyiQ-swCq9Lvxj81vWQKwnNvecL3vPd1oG4rmCi53DHUr6UPe-Q/exec';
-const STATUS_LABELS = ['折り返し','お客様連絡待ち','入荷次第連絡','その他確認事項有','大至急連絡！'];
+const STATUS_LABELS = ['折り返し','お客様連絡待ち','入荷次第連絡','その他確認事項有り','大至急連絡！','商品取消未対応'];
 const COL_DEFS = [
   {id:'c1',title:'問合せ未対応',color:'#E24B4A'},
   {id:'c2',title:'お客様検討中',color:'#BA7517'},
@@ -732,15 +733,18 @@ function buildCardEl(card, colId){
   el.dataset.cardId=card.id;
   el.dataset.colId=colId;
 
-  const stTags=(card.status||[]).filter(i=>i!==4).map(i=>`<span class="stag">${esc(STATUS_LABELS[i])}</span>`).join('');
+  const stTags=(card.status||[]).filter(i=>i!==4&&i!==5).map(i=>`<span class="stag">${esc(STATUS_LABELS[i])}</span>`).join('');
   const resStr=card.resDate
     ?(card.resDate.slice(5)+' '+(card.resTime||'--:--')+' / '+durLabel(card.duration))
     :'予約日未設定 / '+durLabel(card.duration);
 
   const staffStr = [card.uketsuke, card.tanto].filter(Boolean).join(' / ');
   const isUrgent = (card.status||[]).includes(4);
+  const isCancel = (card.status||[]).includes(5);
+  const urgentBanner = isUrgent?`<div style="background:#E24B4A;color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:6px 6px 0 0;margin:-10px -11px 6px;text-align:center">🔴 大至急連絡！</div>`:'';
+  const cancelBanner = isCancel?`<div style="background:#1565C0;color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:${isUrgent?'0':'6px 6px 0 0'};margin:${isUrgent?'0':'-10px'} -11px 6px;text-align:center">🔵 商品取消未対応</div>`:'';
   el.innerHTML=`
-    ${isUrgent?'<div style="background:#E24B4A;color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:6px 6px 0 0;margin:-10px -11px 6px;text-align:center">🔴 大至急連絡！</div>':''}
+    ${urgentBanner}${cancelBanner}
     <div class="card-name">${esc(card.name||'(未入力)')}</div>
     ${card.tel?`<div class="card-row"><svg class="ci" viewBox="0 0 12 12" fill="none"><path d="M2 1h3l1 3-1.5 1a7 7 0 003.5 3.5L9 7l3 1v3a1 1 0 01-1 1C4.5 12 0 7.5 0 2a1 1 0 011-1h1z" fill="currentColor"/></svg><span>${esc(card.tel)}</span></div>`:''}
     ${staffStr?`<div class="card-row"><svg class="ci" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="4" r="3" fill="currentColor"/><path d="M0 11c0-3 2.7-5 6-5s6 2 6 5" fill="currentColor"/></svg><span>${esc(staffStr)}</span></div>`:''}
@@ -814,7 +818,7 @@ function openEdit(cardId, colId){
   });
   calcTotal();
   for(let i=1;i<=10;i++) sc('t'+i,(card.tires||[]).includes(i));
-  for(let i=1;i<=5;i++) sc('st'+i,(card.status||[]).includes(i-1));
+  document.querySelectorAll('.chk-group input[id^="st"]').forEach(cb=>{sc(cb.id,(card.status||[]).includes(parseInt(cb.dataset.sv)));});
   document.getElementById('avail-msg').className='avail';
   isModalOpen=true;
   document.getElementById('overlay').classList.add('open');
@@ -829,7 +833,7 @@ function overlayClick(e){ if(e.target===document.getElementById('overlay')) clos
 
 function resetChk(){
   for(let i=1;i<=10;i++) sc('t'+i,false);
-  for(let i=1;i<=5;i++) sc('st'+i,false);
+  document.querySelectorAll('.chk-group input[id^="st"]').forEach(cb=>{sc(cb.id,false);});
 }
 
 // ================================================================
@@ -983,7 +987,7 @@ function collectCard(){
     });
   });
   const tires=[];for(let i=1;i<=10;i++){if(gc('t'+i))tires.push(i);}
-  const status=[];for(let i=1;i<=5;i++){if(gc('st'+i))status.push(i===5?4:i-1);}
+  const status=[];document.querySelectorAll('.chk-group input[id^="st"]').forEach(cb=>{if(cb.checked)status.push(parseInt(cb.dataset.sv));});
   const rawSub=Math.round(products.reduce((s,p)=>s+p.sub,0));
   const coupon=gv('f-coupon');
   const discRate=coupon==='当店10%OFFクーポン'?0.1:coupon==='あゆこ割'?0.05:0;
