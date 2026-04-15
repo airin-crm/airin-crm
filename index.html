@@ -524,8 +524,8 @@ function sortCards(arr){ return [...arr].sort((a,b)=>sortKey(a)<sortKey(b)?-1:so
 function sortC1Cards(arr){ return [...arr].sort((a,b)=>{
   const au=(a.status||[]).includes(4)?0:1, bu=(b.status||[]).includes(4)?0:1;
   if(au!==bu) return au-bu;
-  const ad=a.date||'9999', bd=b.date||'9999';
-  return ad<bd?-1:ad>bd?1:0;
+  const ad=a.date||'0000', bd=b.date||'0000';
+  return ad<bd?1:ad>bd?-1:0;
 }); }
 function durLabel(d){ return {'0.5':'30分','1':'1時間','1.5':'1時間30分','2':'2時間'}[d]||d+'h'; }
 function endTime(t,dur){ const[h,m]=t.split(':').map(Number),e=h*60+m+Math.round(parseFloat(dur)*60); return Math.floor(e/60)+':'+String(e%60).padStart(2,'0'); }
@@ -1060,10 +1060,14 @@ function saveAndReserve(){
   const prevDuration = existingCard?.duration || null;
   const isChange = prevResDate && prevResTime &&
     (prevResDate !== card.resDate || prevResTime !== card.resTime);
+  const isUpdate = !isChange && !!(prevResDate && prevResTime && existingCard?.reservedSlot);
 
   let confirmMsg = '';
   if(isChange){
     confirmMsg = `予約を変更しますか？\n\n【変更前】${prevResDate} ${prevResTime}（${durLabel(prevDuration)}）\n【変更後】${card.resDate} ${card.resTime}（${durLabel(card.duration)}）\n\n元の予約は自動的に削除されます。`;
+  } else if(isUpdate){
+    const slotLabel = existingCard.reservedSlot==='F'?'予約枠1':'予約枠2';
+    confirmMsg = `予約内容を上書きしますか？\n\n【予約日時】${card.resDate} ${card.resTime}（${durLabel(card.duration)}）\n【お客様】${card.name}\n\n${slotLabel}の内容を更新します。`;
   } else {
     confirmMsg = `予約を入れますか？\n\n【予約日時】${card.resDate} ${card.resTime}（${durLabel(card.duration)}）\n【お客様】${card.name}`;
   }
@@ -1100,6 +1104,9 @@ function saveAndReserve(){
     sendData.deleteDuration = prevDuration;
     const savedSlot = existingCard?.reservedSlot;
     sendData.deleteSlot = savedSlot || null;
+  } else if(isUpdate){
+    sendData.isUpdate = true;
+    sendData.updateSlot = existingCard.reservedSlot;
   }
   jsonpCall(GS_URL+'?action=reserve&callback={CB}&data='+encodeURIComponent(JSON.stringify(sendData)),30000)
     .then(r=>{
