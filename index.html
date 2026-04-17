@@ -969,20 +969,20 @@ function calcTotal(){
 function collectCard(){
   const products=[];
   document.querySelectorAll('#pt-body tr').forEach(tr=>{
-    const item=tr.querySelector('.pi')?.value;
+    const item=tr.querySelector('.pi')?.value||'';
+    const kbn=tr.querySelector('.pk')?.value||'';
+    const newUsed=tr.querySelector('.pn')?.value||'';
+    const season=tr.querySelector('.ps')?.value||'';
+    const code=tr.querySelector('.pcode')?.value||'';
+    const w=tr.querySelector('.pw')?.value||'';
+    const h=tr.querySelector('.ph')?.value||'';
+    const inch=tr.querySelector('.pinch')?.value||'';
+    const load=tr.querySelector('.pl')?.value||'';
+    const memo=tr.querySelector('.pmemo')?.value||'';
     const qty=parseFloat(tr.querySelector('.pq')?.value)||0;
     const price=parseFloat(tr.querySelector('.pp')?.value)||0;
-    const memo=tr.querySelector('.pmemo')?.value||'';
-    if(item&&(qty>0||price>0||memo)) products.push({
-      item, kbn:tr.querySelector('.pk')?.value,
-      newUsed:tr.querySelector('.pn')?.value,
-      season:tr.querySelector('.ps')?.value,
-      code:tr.querySelector('.pcode')?.value||'',
-      w:tr.querySelector('.pw')?.value,
-      h:tr.querySelector('.ph')?.value,
-      inch:tr.querySelector('.pinch')?.value,
-      load:tr.querySelector('.pl')?.value,
-      memo,
+    if(item||kbn||newUsed||season||code||w||h||inch||load||memo||qty>0||price>0) products.push({
+      item, kbn, newUsed, season, code, w, h, inch, load, memo,
       qty, price, sub:qty*price
     });
   });
