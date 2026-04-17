@@ -527,6 +527,11 @@ function sortC1Cards(arr){ return [...arr].sort((a,b)=>{
   const ad=a.date||'0000', bd=b.date||'0000';
   return ad<bd?1:ad>bd?-1:0;
 }); }
+function sortC3Cards(arr){ return [...arr].sort((a,b)=>{
+  const ac=(a.status||[]).includes(5)?0:1, bc=(b.status||[]).includes(5)?0:1;
+  if(ac!==bc) return ac-bc;
+  return sortKey(a)<sortKey(b)?-1:sortKey(a)>sortKey(b)?1:0;
+}); }
 function durLabel(d){ return {'0.5':'30分','1':'1時間','1.5':'1時間30分','2':'2時間'}[d]||d+'h'; }
 function endTime(t,dur){ const[h,m]=t.split(':').map(Number),e=h*60+m+Math.round(parseFloat(dur)*60); return Math.floor(e/60)+':'+String(e%60).padStart(2,'0'); }
 function gv(id){ return document.getElementById(id)?.value||''; }
@@ -605,7 +610,7 @@ function renderBoard(){
   board.appendChild(colContainer);
 
   COLS.forEach(col=>{
-    col.cards=col.id==='c1'?sortC1Cards(col.cards):sortCards(col.cards);
+    col.cards=col.id==='c1'?sortC1Cards(col.cards):col.id==='c3'?sortC3Cards(col.cards):sortCards(col.cards);
     colContainer.appendChild(buildColEl(col));
   });
 
@@ -651,7 +656,7 @@ function renderBoard(){
         if(idx===-1) return;
         const[card]=fromCol.cards.splice(idx,1);
         toCol.cards.push(card);
-        toCol.cards=toCol.id==='c1'?sortC1Cards(toCol.cards):sortCards(toCol.cards);
+        toCol.cards=toCol.id==='c1'?sortC1Cards(toCol.cards):toCol.id==='c3'?sortC3Cards(toCol.cards):sortCards(toCol.cards);
         isSyncing=true;
         if(fromColId !== toColId){
           saveCol_FB(fromCol);
@@ -1091,7 +1096,7 @@ function saveAndReserve(){
   const resCol=COLS.find(c=>c.id==='c3')||COLS[0];
   resCol.cards = resCol.cards.filter(x=>x.id!==card.id);
   resCol.cards.push(card);
-  resCol.cards=sortCards(resCol.cards);
+  resCol.cards=sortC3Cards(resCol.cards);
   editCardId=card.id; editColId='c3';
   saveCard_FB(card, 'c3');
   closeModal();
