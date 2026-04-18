@@ -610,7 +610,7 @@ function renderBoard(){
   board.appendChild(colContainer);
 
   COLS.forEach(col=>{
-    col.cards=col.id==='c1'?sortC1Cards(col.cards):col.id==='c3'?sortC3Cards(col.cards):sortCards(col.cards);
+    col.cards=(col.id==='c1'||col.id==='c2')?sortC1Cards(col.cards):col.id==='c3'?sortC3Cards(col.cards):sortCards(col.cards);
     colContainer.appendChild(buildColEl(col));
   });
 
@@ -656,7 +656,7 @@ function renderBoard(){
         if(idx===-1) return;
         const[card]=fromCol.cards.splice(idx,1);
         toCol.cards.push(card);
-        toCol.cards=toCol.id==='c1'?sortC1Cards(toCol.cards):toCol.id==='c3'?sortC3Cards(toCol.cards):sortCards(toCol.cards);
+        toCol.cards=(toCol.id==='c1'||toCol.id==='c2')?sortC1Cards(toCol.cards):toCol.id==='c3'?sortC3Cards(toCol.cards):sortCards(toCol.cards);
         isSyncing=true;
         if(fromColId !== toColId){
           saveCol_FB(fromCol);
