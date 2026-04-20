@@ -659,9 +659,9 @@ function renderBoard(){
         toCol.cards=(toCol.id==='c1'||toCol.id==='c2')?sortC1Cards(toCol.cards):toCol.id==='c3'?sortC3Cards(toCol.cards):sortCards(toCol.cards);
         isSyncing=true;
         if(fromColId !== toColId){
-          saveCol_FB(fromCol);
+          deleteCard_FB(cardId, fromColId);
         }
-        saveCol_FB(toCol);
+        saveCard_FB(card, toColId);
         setTimeout(()=>{ isSyncing=false; renderBoard(); if(searchQuery)doSearch(); },800);
       }
     });
