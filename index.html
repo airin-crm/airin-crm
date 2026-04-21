@@ -186,7 +186,7 @@ button{font-family:inherit;cursor:pointer}
   </div>
   <button class="btn-new" onclick="openNew(null)">＋ 新規カード</button>
   <div class="search-wrap">
-    <input class="search-input" id="sb" placeholder="名前・電話番号で検索..." oninput="doSearch()"/>
+    <input class="search-input" id="sb" placeholder="名前・電話番号・商品名で検索..." oninput="doSearch()"/>
     <button class="search-clear" id="sc-btn" onclick="clearSearch()" style="display:none">✕</button>
     <span id="sc-badge" class="search-badge" style="display:none"></span>
   </div>
@@ -553,7 +553,8 @@ function doSearch(){
     const el=document.getElementById('card-'+c.id);
     if(!el) return;
     if(!q){ el.classList.remove('hidden','highlight'); return; }
-    const match=norm(c.name).includes(nq)||norm(c.tel).includes(nq);
+    const firstMemo=c.products&&c.products[0]?c.products[0].memo||'':'';
+    const match=norm(c.name).includes(nq)||norm(c.tel).includes(nq)||norm(firstMemo).includes(nq);
     el.classList.toggle('hidden',!match);
     el.classList.toggle('highlight',match);
     if(match) total++;
@@ -751,6 +752,7 @@ function buildCardEl(card, colId){
   el.innerHTML=`
     ${urgentBanner}${cancelBanner}
     <div class="card-name">${esc(card.name||'(未入力)')}</div>
+    ${(card.products&&card.products[0]&&card.products[0].memo)?`<div style="font-size:11px;font-weight:500;color:#1a1a1a;margin:-2px 0 4px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(card.products[0].memo)}</div>`:''}
     ${card.tel?`<div class="card-row"><svg class="ci" viewBox="0 0 12 12" fill="none"><path d="M2 1h3l1 3-1.5 1a7 7 0 003.5 3.5L9 7l3 1v3a1 1 0 01-1 1C4.5 12 0 7.5 0 2a1 1 0 011-1h1z" fill="currentColor"/></svg><span>${esc(card.tel)}</span></div>`:''}
     ${staffStr?`<div class="card-row"><svg class="ci" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="4" r="3" fill="currentColor"/><path d="M0 11c0-3 2.7-5 6-5s6 2 6 5" fill="currentColor"/></svg><span>${esc(staffStr)}</span></div>`:''}
     <div class="card-row"><svg class="ci" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="9" rx="1" stroke="currentColor" stroke-width="1" fill="none"/><path d="M4 1v2M8 1v2M1 5h10" stroke="currentColor" stroke-width="1"/></svg><span>${esc(resStr)}</span></div>
