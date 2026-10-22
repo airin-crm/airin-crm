@@ -1413,7 +1413,7 @@ function _fillFromLookup(tr, r){
   const rows=Array.from(document.querySelectorAll('#pt-body tr'));
   const pcIdx=rows.indexOf(tr);
   for(let i=pcIdx+1;i<rows.length;i++){
-    if(rows[i].querySelector('.pi')?.value==='廃タイヤ処分代') _applyHaitaPrice(rows[i], tr);
+    if(rows[i].querySelector('.pi')?.value==='廃タイヤ処分代'&&tr.querySelector('.pi')?.value==='PC') _applyHaitaPrice(rows[i], tr);
   }
   calcTotal();
 }
@@ -1494,7 +1494,7 @@ document.getElementById('pt-body').addEventListener('change', function(e){
   if(!pcRow) return;
   const qty=pcRow.querySelector('.pq').value;
   if(qty) tr.querySelector('.pq').value=qty;
-  if(val==='廃タイヤ処分代') _applyHaitaPrice(tr, pcRow);
+  if(val==='廃タイヤ処分代'&&pcRow.querySelector('.pi')?.value==='PC') _applyHaitaPrice(tr, pcRow);
   calcTotal();
 });
 
