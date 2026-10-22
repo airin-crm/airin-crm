@@ -1409,6 +1409,12 @@ function _fillFromLookup(tr, r){
   if(r.qty!==undefined && String(r.qty)!=='') tr.querySelector('.pq').value=r.qty;
   if(r.price!==undefined && String(r.price)!=='') tr.querySelector('.pp').value=r.price;
   autoFillMemo(tr.querySelector('.pk'));
+  // 同じPC行の下にある廃タイヤ処分代の単価を再計算
+  const rows=Array.from(document.querySelectorAll('#pt-body tr'));
+  const pcIdx=rows.indexOf(tr);
+  for(let i=pcIdx+1;i<rows.length;i++){
+    if(rows[i].querySelector('.pi')?.value==='廃タイヤ処分代') _applyHaitaPrice(rows[i], tr);
+  }
   calcTotal();
 }
 
@@ -1458,6 +1464,37 @@ document.getElementById('pt-body').addEventListener('focusout', function(e){
   const code=el.value.trim().toUpperCase();
   if(!/^TT?\d{4}$/.test(code)) return;
   _doLookup(el, code);
+});
+
+// ================================================================
+// 工賃・廃タイヤ処分代 自動入力
+// ================================================================
+function _findPcRow(tr){
+  const rows=Array.from(document.querySelectorAll('#pt-body tr'));
+  const idx=rows.indexOf(tr);
+  for(let i=idx-1;i>=0;i--){
+    if(rows[i].querySelector('.pi')?.value==='PC') return rows[i];
+  }
+  return null;
+}
+
+function _applyHaitaPrice(tr, pcRow){
+  const inch=parseInt(pcRow.querySelector('.pinch').value)||0;
+  if(inch>=12&&inch<=18) tr.querySelector('.pp').value=300;
+  else if(inch>=19) tr.querySelector('.pp').value=500;
+}
+
+document.getElementById('pt-body').addEventListener('change', function(e){
+  if(!e.target.classList.contains('pi')) return;
+  const val=e.target.value;
+  if(val!=='工賃'&&val!=='廃タイヤ処分代') return;
+  const tr=e.target.closest('tr');
+  const pcRow=_findPcRow(tr);
+  if(!pcRow) return;
+  const qty=pcRow.querySelector('.pq').value;
+  if(qty) tr.querySelector('.pq').value=qty;
+  if(val==='廃タイヤ処分代') _applyHaitaPrice(tr, pcRow);
+  calcTotal();
 });
 
 // ================================================================
