@@ -1395,28 +1395,63 @@ function snoozeAlert(){
 // ================================================================
 // 在庫番号オートフィル（T/TT + 4桁）
 // ================================================================
-document.getElementById('pt-body').addEventListener('focusout', function(e){
-  if(!e.target.classList.contains('pcode')) return;
-  const code = e.target.value.trim().toUpperCase();
-  if(!/^TT?\d{4}$/.test(code)) return;
-  const tr = e.target.closest('tr');
-  e.target.style.background='#fff3cd';
-  jsonpCall(GS_URL+'?action=lookup&callback={CB}&data='+encodeURIComponent(JSON.stringify({code})),10000)
+const _lookupCache = new Map();
+const _lookupTimers = new WeakMap();
+
+function _fillFromLookup(tr, r){
+  tr.querySelector('.pk').value='タイヤ';
+  if(r.sw) tr.querySelector('.ps').value=r.sw;
+  if(r.width!==undefined && String(r.width)!=='') tr.querySelector('.pw').value=r.width;
+  if(r.ratio!==undefined && String(r.ratio)!=='') tr.querySelector('.ph').value=r.ratio;
+  if(r.inch!==undefined && String(r.inch)!=='') tr.querySelector('.pinch').value=r.inch;
+  if(r.load!==undefined && String(r.load)!=='') tr.querySelector('.pl').value=r.load;
+  if(r.qty!==undefined && String(r.qty)!=='') tr.querySelector('.pq').value=r.qty;
+  autoFillMemo(tr.querySelector('.pk'));
+  calcTotal();
+}
+
+function _doLookup(el, code){
+  const tr = el.closest('tr');
+  el.style.background='#fff3cd';
+  if(_lookupCache.has(code)){
+    _fillFromLookup(tr, _lookupCache.get(code));
+    el.style.background='';
+    showToast('在庫情報を自動入力しました','ok');
+    return;
+  }
+  jsonpCall(GS_URL+'?action=lookup&callback={CB}&data='+encodeURIComponent(JSON.stringify({code})),25000)
     .then(r=>{
+      if(el.value.trim().toUpperCase()!==code) return;
       if(!r.ok){ showToast('在庫検索: '+(r.error||'不明'),'error'); return; }
-      tr.querySelector('.pk').value='タイヤ';
-      if(r.sw) tr.querySelector('.ps').value=r.sw;
-      if(r.width!==undefined && String(r.width)!=='') tr.querySelector('.pw').value=r.width;
-      if(r.ratio!==undefined && String(r.ratio)!=='') tr.querySelector('.ph').value=r.ratio;
-      if(r.inch!==undefined && String(r.inch)!=='') tr.querySelector('.pinch').value=r.inch;
-      if(r.load!==undefined && String(r.load)!=='') tr.querySelector('.pl').value=r.load;
-      if(r.qty!==undefined && String(r.qty)!=='') tr.querySelector('.pq').value=r.qty;
-      autoFillMemo(tr.querySelector('.pk'));
-      calcTotal();
+      _lookupCache.set(code, r);
+      _fillFromLookup(tr, r);
       showToast('在庫情報を自動入力しました','ok');
     })
-    .catch(()=>showToast('在庫検索エラー','error'))
-    .finally(()=>{ e.target.style.background=''; });
+    .catch(()=>{
+      if(el.value.trim().toUpperCase()!==code) return;
+      showToast('在庫検索エラー（時間をおいて再入力してください）','error');
+    })
+    .finally(()=>{ el.style.background=''; });
+}
+
+// inputイベント：パターン一致で先読み（500ms デバウンス）
+document.getElementById('pt-body').addEventListener('input', function(e){
+  if(!e.target.classList.contains('pcode')) return;
+  const el=e.target;
+  clearTimeout(_lookupTimers.get(el));
+  const code=el.value.trim().toUpperCase();
+  if(!/^TT?\d{4}$/.test(code)) return;
+  _lookupTimers.set(el, setTimeout(()=>_doLookup(el,code), 500));
+});
+
+// focusoutでも確実に発火
+document.getElementById('pt-body').addEventListener('focusout', function(e){
+  if(!e.target.classList.contains('pcode')) return;
+  const el=e.target;
+  clearTimeout(_lookupTimers.get(el));
+  const code=el.value.trim().toUpperCase();
+  if(!/^TT?\d{4}$/.test(code)) return;
+  _doLookup(el, code);
 });
 
 // ================================================================
