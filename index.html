@@ -111,6 +111,9 @@ button{font-family:inherit;cursor:pointer}
 .btn-r{background:#3B6D11;color:#EAF3DE;border-color:transparent;font-weight:600}
 .btn-r:hover{opacity:.88}
 .btn-r:disabled{opacity:.5;cursor:wait}
+.btn-t{background:#0D6B4E;color:#E8F5EF;border-color:transparent;font-weight:600}
+.btn-t:hover{opacity:.88}
+.btn-t:disabled{opacity:.5;cursor:wait}
 .btn-s{background:#854F0B;color:#FAEEDA;border-color:transparent;font-weight:600}
 .btn-s:hover{opacity:.88}
 .btn-d{color:#A32D2D;border-color:#F09595}
@@ -338,6 +341,7 @@ button{font-family:inherit;cursor:pointer}
       <button class="btn" onclick="printCard()" style="border-color:#888">🖨 印刷</button>
       <button class="btn btn-p" onclick="saveCard()">保存</button>
       <button class="btn btn-r" id="res-btn" onclick="saveAndReserve()">予約を入れる</button>
+      <button class="btn btn-t" id="takehome-btn" onclick="saveAndTakeHome()">持ち帰り予約</button>
       <button class="btn btn-s" onclick="markSales()">売上を上げる</button>
     </div>
   </div>
@@ -516,7 +520,7 @@ function todayJST(){ const d=new Date(),j=new Date(d.getTime()+9*3600000); retur
 function nowJST(){ const d=new Date(),j=new Date(d.getTime()+9*3600000); return j.toISOString().slice(0,16); }
 function norm(s){ return !s?'':s.replace(/[-－ー]/g,'').replace(/[\u30A0-\u30FF]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60)).toLowerCase(); }
 function sortKey(c){
-  if(c.resDate&&c.resTime){ const[h,m]=c.resTime.split(':').map(Number); return c.resDate.replace(/-/g,'')+String(h*60+m).padStart(4,'0'); }
+  if(c.resDate&&c.resTime){ const p=c.resTime.split(':'); if(p.length===2){const[h,m]=p.map(Number);if(!isNaN(h)&&!isNaN(m))return c.resDate.replace(/-/g,'')+String(h*60+m).padStart(4,'0');} return c.resDate.replace(/-/g,'')+'9999'; }
   if(c.resDate) return c.resDate.replace(/-/g,'')+'9999';
   if(c.date) return c.date.replace(/-/g,'')+'Z';
   return 'ZZZZZZZZZZ';
@@ -1055,6 +1059,46 @@ function checkAvail(){
   if(!d||!t){ msg.className='avail'; return; }
   msg.textContent=`${d} ${t} 〜 ${endTime(t,dur)} に予約を入れます`;
   msg.className='avail ok';
+}
+
+function saveAndTakeHome(){
+  const card=collectCard();
+  if(!card.name){ showToast('お客様名を入力してください','error'); return; }
+  if(!confirm('持ち帰り予約を入れますか？\n\n【お客様】'+card.name+'\n\n本日分のその他作業枠に自動で登録されます。')) return;
+
+  const btn=document.getElementById('takehome-btn');
+  btn.disabled=true; btn.textContent='送信中...';
+  isSyncing=true;
+
+  card.resDate=todayJST();
+  card.resTime='その他作業枠';
+  card.duration='0';
+
+  if(editCardId){
+    const oldCol=COLS.find(c=>c.id===editColId);
+    if(oldCol){
+      oldCol.cards=oldCol.cards.filter(x=>x.id!==editCardId);
+      if(editColId!=='c3') deleteCard_FB(editCardId,editColId);
+    }
+  }
+  const resCol=COLS.find(c=>c.id==='c3')||COLS[0];
+  resCol.cards=resCol.cards.filter(x=>x.id!==card.id);
+  resCol.cards.push(card);
+  resCol.cards=sortC3Cards(resCol.cards);
+  editCardId=card.id; editColId='c3';
+  saveCard_FB(card,'c3');
+  closeModal();
+  setTimeout(()=>{ isSyncing=false; renderBoard(); showToast('予約済みに移動しました','ok'); },300);
+
+  const fp=(card.products||[])[0]||{};
+  const sendData={name:card.name,tel:card.tel,firstProduct:fp};
+  jsonpCall(GS_URL+'?action=takeHome&callback={CB}&data='+encodeURIComponent(JSON.stringify(sendData)),30000)
+    .then(r=>{
+      if(r.ok){ showToast('✓ '+r.message,'ok'); }
+      else { showToast('持ち帰り予約エラー: '+(r.error||'不明'),'error'); }
+    })
+    .catch(e=>showToast('通信エラー: '+e,'error'))
+    .finally(()=>{ btn.disabled=false; btn.textContent='持ち帰り予約'; });
 }
 
 function saveAndReserve(){
