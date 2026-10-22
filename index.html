@@ -1393,6 +1393,33 @@ function snoozeAlert(){
 }
 
 // ================================================================
+// 在庫番号オートフィル（T/TT + 4桁）
+// ================================================================
+document.getElementById('pt-body').addEventListener('focusout', function(e){
+  if(!e.target.classList.contains('pcode')) return;
+  const code = e.target.value.trim().toUpperCase();
+  if(!/^TT?\d{4}$/.test(code)) return;
+  const tr = e.target.closest('tr');
+  e.target.style.background='#fff3cd';
+  jsonpCall(GS_URL+'?action=lookup&callback={CB}&data='+encodeURIComponent(JSON.stringify({code})),10000)
+    .then(r=>{
+      if(!r.ok){ showToast('在庫検索: '+(r.error||'不明'),'error'); return; }
+      tr.querySelector('.pk').value='タイヤ';
+      if(r.sw) tr.querySelector('.ps').value=r.sw;
+      if(r.width!==undefined && String(r.width)!=='') tr.querySelector('.pw').value=r.width;
+      if(r.ratio!==undefined && String(r.ratio)!=='') tr.querySelector('.ph').value=r.ratio;
+      if(r.inch!==undefined && String(r.inch)!=='') tr.querySelector('.pinch').value=r.inch;
+      if(r.load!==undefined && String(r.load)!=='') tr.querySelector('.pl').value=r.load;
+      if(r.qty!==undefined && String(r.qty)!=='') tr.querySelector('.pq').value=r.qty;
+      autoFillMemo(tr.querySelector('.pk'));
+      calcTotal();
+      showToast('在庫情報を自動入力しました','ok');
+    })
+    .catch(()=>showToast('在庫検索エラー','error'))
+    .finally(()=>{ e.target.style.background=''; });
+});
+
+// ================================================================
 // 初期化
 // ================================================================
 firebase.auth().onAuthStateChanged(user => {
