@@ -795,7 +795,7 @@ function openNew(colId){
   ['uketsuke','tanto','name','tel','car','type','work','resdate','restime','worker','confirm'].forEach(f=>sv('f-'+f,''));
   sv('f-coupon','なし'); sv('f-pay',''); sv('f-receipt','発行なし'); const excDef=document.getElementById('tax-exclusive'); if(excDef)excDef.checked=true;
   sv('f-dur','1'); sv('f-memo',''); sv('f-date',nowJST());
-  buildRows(); resetChk();
+  buildRows(); resetChk(); _warmupGAS();
   document.getElementById('avail-msg').className='avail';
   isModalOpen=true;
   document.getElementById('overlay').classList.add('open');
@@ -838,6 +838,7 @@ function openEdit(cardId, colId){
   document.getElementById('avail-msg').className='avail';
   isModalOpen=true;
   document.getElementById('overlay').classList.add('open');
+  _warmupGAS();
 }
 
 function closeModal(){
@@ -1406,8 +1407,13 @@ function _fillFromLookup(tr, r){
   if(r.inch!==undefined && String(r.inch)!=='') tr.querySelector('.pinch').value=r.inch;
   if(r.load!==undefined && String(r.load)!=='') tr.querySelector('.pl').value=r.load;
   if(r.qty!==undefined && String(r.qty)!=='') tr.querySelector('.pq').value=r.qty;
+  if(r.price!==undefined && String(r.price)!=='') tr.querySelector('.pp').value=r.price;
   autoFillMemo(tr.querySelector('.pk'));
   calcTotal();
+}
+
+function _warmupGAS(){
+  jsonpCall(GS_URL+'?action=ping&callback={CB}',30000).catch(()=>{});
 }
 
 function _doLookup(el, code){
