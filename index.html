@@ -1067,13 +1067,15 @@ function checkAvail(){
 function saveAndTakeHome(){
   const card=collectCard();
   if(!card.name){ showToast('お客様名を入力してください','error'); return; }
-  if(!confirm('持ち帰り予約を入れますか？\n\n【お客様】'+card.name+'\n\n本日分のその他作業枠に自動で登録されます。')) return;
+  const takeHomeDate=card.resDate||todayJST();
+  const dateLbl=takeHomeDate.slice(5).replace('-','/');
+  if(!confirm('持ち帰り予約を入れますか？\n\n【お客様】'+card.name+'\n\n'+dateLbl+'のその他作業枠に自動で登録されます。')) return;
 
   const btn=document.getElementById('takehome-btn');
   btn.disabled=true; btn.textContent='送信中...';
   isSyncing=true;
 
-  card.resDate=todayJST();
+  card.resDate=takeHomeDate;
   card.resTime='その他作業枠';
   card.duration='0';
 
@@ -1094,7 +1096,7 @@ function saveAndTakeHome(){
   setTimeout(()=>{ isSyncing=false; renderBoard(); showToast('予約済みに移動しました','ok'); },300);
 
   const fp=(card.products||[])[0]||{};
-  const sendData={name:card.name,tel:card.tel,firstProduct:fp};
+  const sendData={name:card.name,tel:card.tel,firstProduct:fp,resDate:card.resDate};
   jsonpCall(GS_URL+'?action=takeHome&callback={CB}&data='+encodeURIComponent(JSON.stringify(sendData)),30000)
     .then(r=>{
       if(r.ok){ showToast('✓ '+r.message,'ok'); }
